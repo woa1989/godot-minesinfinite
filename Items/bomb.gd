@@ -69,17 +69,26 @@ func _on_timer_timeout():
 			for tile_pos in affected_tiles:
 				var tile_data = dirt.get_cell_tile_data(tile_pos)
 				if tile_data:
-					# 获取瓦片的atlas_coords以检查是否是炸药
-					var atlas_coords = dirt.get_cell_atlas_coords(tile_pos)
-					var is_boom = (atlas_coords == Vector2i(7, 5))
-					
-					if is_boom:
-						# 如果是炸药，则触发其爆炸效果
-						# 触发炸药爆炸，血量会在 damage_tile 中处理
-						dirt.damage_tile(tile_pos, tile_data.get_custom_data_by_layer_id(dirt.health_layer_id))
-					else:
-						# 如果不是炸药，直接破坏
-						dirt.erase_cell(tile_pos)
+						# 获取瓦片的atlas_coords以检查是否是炸药
+						var atlas_coords = dirt.get_cell_atlas_coords(tile_pos)
+						var is_boom = (atlas_coords == Vector2i(7, 5))
+						
+						if is_boom:
+							# 如果是炸药，则触发其爆炸效果
+							# 获取自定义数据层ID
+							var tileset = dirt.tile_set
+							var health_layer_id = -1
+							for i in range(tileset.get_custom_data_layers_count()):
+								if tileset.get_custom_data_layer_name(i) == "health":
+									health_layer_id = i
+									break
+							
+							if health_layer_id >= 0:
+								# 调用dig_at方法来处理炸药爆炸
+								dirt.dig_at(tile_pos)
+						else:
+							# 如果不是炸药，直接破坏
+							dirt.erase_cell(tile_pos)
 	
 	# 播放爆炸效果
 	$ColorRect.hide() # 隐藏炸弹图形
