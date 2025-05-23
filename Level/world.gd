@@ -36,14 +36,14 @@ var current_chunk = Vector2i.ZERO
 
 func _ready() -> void:
 	# 计算初始位置，确保左墙在屏幕最左边
-	world_position = Vector2(-TILE_SIZE, 0) # 向左偏移一个瓦片的距离，确保左墙在屏幕最左边
+	# world_position = Vector2(-TILE_SIZE, 0) # 向左偏移一个瓦片的距离，确保左墙在屏幕最左边
 	
-	# 如果Global有设置位置，则使用Global的位置
-	if Global.default_map_position != Vector2.ZERO:
-		world_position = Global.default_map_position
-	else:
-		# 初始化全局位置
-		Global.default_map_position = world_position
+	# # 如果Global有设置位置，则使用Global的位置
+	# if Global.default_map_position != Vector2.ZERO:
+	# 	world_position = Global.default_map_position
+	# else:
+	# 	# 初始化全局位置
+	# 	Global.default_map_position = world_position
 	
 	# 初始化TileSet的自定义数据层
 	var tileset = dirt.tile_set
@@ -52,15 +52,6 @@ func _ready() -> void:
 	
 	# 只连接dig信号
 	player.dig.connect(_on_player_dig)
-	
-	# 调整地图位置
-	position = world_position
-	
-	# 将玩家放置在安全位置
-	# 计算一个安全的位置，确保不会生成在地形内部
-	var safe_y = find_safe_spawn_position()
-	player.global_position = Vector2(TILE_SIZE * 5, safe_y)
-	Global.default_player_position = player.global_position # 保存到全局变量
 	
 	# 初始加载玩家周围的区块
 	update_chunks()

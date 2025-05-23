@@ -281,9 +281,4 @@ wait_time = 1.2
 [node name="WallRaycast" type="RayCast2D" parent="."]
 target_position = Vector2(20, 0)
 
-[connection signal="animation_changed" from="AnimatedSprite2D" to="." method="_on_animated_sprite_2d_animation_changed"]
-[connection signal="body_entered" from="AnimatedSprite2D/WallDetectionArea2D" to="." method="_on_wall_detection_area_2d_body_entered"]
-[connection signal="body_exited" from="AnimatedSprite2D/WallDetectionArea2D" to="." method="_on_wall_detection_area_2d_body_exited"]
-[connection signal="timeout" from="ClimbAdsorptionTime" to="." method="_on_climb_adsorption_time_timeout"]
-[connection signal="timeout" from="SlidingCoolingTimer" to="." method="_on_sliding_cooling_timer_timeout"]
-[connection signal="timeout" from="DigTimer" to="." method="_on_dig_timer_timeout"]
+[connection signal="animation_finished" from="AnimatedSprite2D" to="." method="_on_animation_finished"]
