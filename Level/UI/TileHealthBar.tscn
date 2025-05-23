@@ -1,0 +1,30 @@
+[gd_scene load_steps=4 format=3 uid="uid://l3r6ov6j4pwl"]
+
+[ext_resource type="Script" uid="uid://bc0wuvlcom27j" path="res://Level/UI/tile_health_bar.gd" id="1_health"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_1"]
+bg_color = Color(0.172549, 0.172549, 0.172549, 0.784314)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_2"]
+bg_color = Color(0.901961, 0.137255, 0.172549, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[node name="TileHealthBar" type="Node2D"]
+script = ExtResource("1_health")
+
+[node name="ProgressBar" type="ProgressBar" parent="."]
+custom_minimum_size = Vector2(40, 8)
+offset_left = -20.0
+offset_top = -16.0
+offset_right = 20.0
+offset_bottom = -8.0
+theme_override_styles/background = SubResource("StyleBoxFlat_1")
+theme_override_styles/fill = SubResource("StyleBoxFlat_2")
+show_percentage = false
