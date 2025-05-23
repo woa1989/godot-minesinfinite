@@ -44,6 +44,12 @@ func _physics_process(delta):
 	var on_floor = is_on_floor()
 	on_wall = is_on_wall() and not on_floor
 
+	# 检测是否处于下落状态并重置跳跃状态
+	if player_velocity.y > 0 and not on_floor:
+		is_jumping = false
+		wall_jump_ready = false
+		wall_climb_timer = 0.0
+
 	# 计算墙体方向
 	if on_wall:
 		var normal = get_wall_normal().x
@@ -120,17 +126,22 @@ func _physics_process(delta):
 			if $AudioStreamPlayer2D:
 				$AudioStreamPlayer2D.play()
 		elif wall_jump_ready and wall_jump_cooldown <= 0 and on_wall:
-			# 墙跳，方向自动给反方向
-			player_velocity.y = JUMP_VELOCITY
-			player_velocity.x = - wall_dir * MOVE_SPEED * 2.0
-			can_double_jump = true
-			is_jumping = true
-			$AnimatedSprite2D.play("jump")
-			if $AudioStreamPlayer2D:
-				$AudioStreamPlayer2D.play()
-			wall_jump_ready = false
-			wall_climb_timer = 0.0
-			wall_jump_cooldown = WALL_JUMP_COOLDOWN_TIME
+			# 检查是否按下了反方向键
+			var horizontal_input = Input.get_axis("left", "right")
+			var is_pushing_away = (wall_dir > 0 and horizontal_input < 0) or (wall_dir < 0 and horizontal_input > 0)
+			
+			if is_pushing_away:
+				# 墙跳，方向自动给反方向
+				player_velocity.y = JUMP_VELOCITY
+				player_velocity.x = - wall_dir * MOVE_SPEED * 2.0
+				can_double_jump = true
+				is_jumping = true
+				$AnimatedSprite2D.play("jump")
+				if $AudioStreamPlayer2D:
+					$AudioStreamPlayer2D.play()
+				wall_jump_ready = false
+				wall_climb_timer = 0.0
+				wall_jump_cooldown = WALL_JUMP_COOLDOWN_TIME
 		elif can_double_jump:
 			player_velocity.y = JUMP_VELOCITY
 			can_double_jump = false
