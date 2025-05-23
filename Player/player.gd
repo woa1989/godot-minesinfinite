@@ -142,14 +142,19 @@ func _physics_process(delta):
 	# 爬墙动画和静止逻辑（无墙滑）
 	if wall_jump_ready and on_wall and not mining:
 		if wall_climb_timer < MAX_WALL_CLIMB_TIME:
-			player_velocity.y = 0
-			player_velocity.x = 0
-			$AnimatedSprite2D.play("climb")
-			# 上墙时角色面朝离开墙的方向
-			if wall_dir > 0:
-				$AnimatedSprite2D.scale.x = 1
-			elif wall_dir < 0:
-				$AnimatedSprite2D.scale.x = -1
+			# 检测是否按下键，如果按下则取消爬墙
+			if Input.is_action_pressed("down"):
+				wall_jump_ready = false
+				is_jumping = false
+			else:
+				player_velocity.y = 0
+				player_velocity.x = 0
+				$AnimatedSprite2D.play("climb")
+				# 上墙时角色面朝离开墙的方向
+				if wall_dir > 0:
+					$AnimatedSprite2D.scale.x = 1
+				elif wall_dir < 0:
+					$AnimatedSprite2D.scale.x = -1
 		else:
 			# 超时后直接掉落
 			wall_jump_ready = false
