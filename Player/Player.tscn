@@ -250,12 +250,13 @@ height = 18.0
 
 [node name="Player" type="CharacterBody2D"]
 scale = Vector2(2, 2)
+collision_layer = 2
 safe_margin = 0.2
 script = ExtResource("1_q3lat")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 sprite_frames = SubResource("SpriteFrames_u88xs")
-animation = &"dig"
+animation = &"walk"
 
 [node name="WallDetectionArea2D" type="Area2D" parent="AnimatedSprite2D"]
 

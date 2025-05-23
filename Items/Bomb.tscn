@@ -1,0 +1,94 @@
+[gd_scene load_steps=8 format=3 uid="uid://dydxdhyu7108v"]
+
+[ext_resource type="Script" uid="uid://b4lmqgyk75gsg" path="res://Items/bomb.gd" id="1_bomb"]
+[ext_resource type="Texture2D" uid="uid://nsdukp0l4nhd" path="res://Items/boom.webp" id="2_06fmc"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_1"]
+radius = 8.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_2"]
+radius = 64.0
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_06fmc"]
+blend_mode = 1
+
+[sub_resource type="Curve" id="Curve_1"]
+_data = [Vector2(0, 0), 0.0, 40.0, 0, 0, Vector2(0.7, 80), 0.0, 0.0, 0, 0, Vector2(1, 100), 0.0, 0.0, 0, 0]
+point_count = 3
+
+[sub_resource type="Gradient" id="Gradient_0gjp0"]
+offsets = PackedFloat32Array(0, 0.8, 1)
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 1, 0.5, 1, 1, 1, 0)
+
+[node name="Bomb" type="RigidBody2D"]
+collision_layer = 8
+contact_monitor = true
+max_contacts_reported = 1
+script = ExtResource("1_bomb")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_1")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+offset_left = -8.0
+offset_top = -8.0
+offset_right = 8.0
+offset_bottom = 8.0
+color = Color(0.8, 0.2, 0.2, 1)
+
+[node name="CountdownLabel" type="Label" parent="."]
+offset_left = -20.0
+offset_top = -32.0
+offset_right = 20.0
+offset_bottom = -9.0
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 2
+horizontal_alignment = 1
+
+[node name="Timer" type="Timer" parent="."]
+wait_time = 3.0
+one_shot = true
+autostart = true
+
+[node name="ExplosionArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 3
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExplosionArea"]
+shape = SubResource("CircleShape2D_2")
+disabled = true
+
+[node name="Boom" type="CPUParticles2D" parent="."]
+material = SubResource("CanvasItemMaterial_06fmc")
+emitting = false
+amount = 1
+texture = ExtResource("2_06fmc")
+lifetime = 0.8
+one_shot = true
+explosiveness = 1.0
+fixed_fps = 60
+draw_order = 1
+emission_shape = 1
+emission_sphere_radius = 1.0
+direction = Vector2(0, 0)
+spread = 0.0
+gravity = Vector2(0, 0)
+scale_amount_min = 0.1
+scale_amount_max = 0.1
+scale_amount_curve = SubResource("Curve_1")
+color = Color(1, 0.5, 0, 1)
+color_ramp = SubResource("Gradient_0gjp0")
+
+[node name="Debris" type="CPUParticles2D" parent="."]
+emitting = false
+amount = 30
+lifetime = 0.6
+one_shot = true
+explosiveness = 1.0
+spread = 180.0
+gravity = Vector2(0, 500)
+initial_velocity_min = 200.0
+initial_velocity_max = 300.0
+scale_amount_min = 2.0
+scale_amount_max = 4.0
+color = Color(1, 0.7, 0.2, 1)

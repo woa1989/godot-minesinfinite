@@ -10,6 +10,8 @@ const JUMP_VELOCITY = -300.0 # 跳跃初速度
 const SLIDE_SPEED = 500.0 # 滑铲速度
 const SLIDE_TIME = 0.25 # 滑铲持续时间
 const SLIDE_COOLDOWN = 0.6 # 滑铲冷却
+const BOMB_THROW_FORCE = Vector2(200, -200) # 炸弹投掷力度
+const Bomb = preload("res://Items/Bomb.tscn")
 var GRAVITY = 1200.0 # 重力（启动时赋值）
 
 # 状态变量
@@ -83,11 +85,15 @@ func _physics_process(delta):
 
 	if is_sliding:
 		slide_timer -= delta
-		if slide_timer <= 0 or not Input.is_action_pressed("down"):
+		if slide_timer <= 0:
 			is_sliding = false
+			$AnimatedSprite2D.play("idle")
 		else:
 			velocity = player_velocity
 			move_and_slide()
+			if not Input.is_action_pressed("down"):
+				is_sliding = false
+				$AnimatedSprite2D.play("idle")
 			return
 
 	# 按键移动（无惯性，松开立即停）
@@ -116,7 +122,7 @@ func _physics_process(delta):
 		elif wall_jump_ready and wall_jump_cooldown <= 0 and on_wall:
 			# 墙跳，方向自动给反方向
 			player_velocity.y = JUMP_VELOCITY
-			player_velocity.x = -wall_dir * MOVE_SPEED * 2.0
+			player_velocity.x = - wall_dir * MOVE_SPEED * 2.0
 			can_double_jump = true
 			is_jumping = true
 			$AnimatedSprite2D.play("jump")
@@ -203,3 +209,26 @@ func get_tile_pos(offset: Vector2) -> Vector2i:
 		var local_pos = tilemap.to_local(global_position + offset)
 		return tilemap.local_to_map(local_pos)
 	return Vector2i.ZERO
+
+func _unhandled_input(event):
+	if event.is_action_pressed("throw_bomb") and Global.dynamite_remaining > 0:
+		throw_bomb()
+
+func throw_bomb():
+	if Global.dynamite_remaining <= 0:
+		return
+		
+	# 创建炸弹实例
+	var bomb = Bomb.instantiate()
+	get_parent().add_child(bomb)
+	bomb.position = position
+	
+	# 根据玩家朝向设置投掷方向
+	var direction = sign($AnimatedSprite2D.scale.x) # 使用sign函数获取方向，1表示右，-1表示左
+	var impulse = Vector2(BOMB_THROW_FORCE.x * direction, BOMB_THROW_FORCE.y)
+	bomb.apply_central_impulse(impulse)
+	
+	# 减少炸弹数量
+	Global.dynamite_remaining -= 1
+	
+	# TODO: 播放投掷动画和音效

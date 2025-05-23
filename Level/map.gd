@@ -71,6 +71,7 @@ func dig_at(tile_pos: Vector2i) -> bool:
 			return false # 不可破坏
 		var atlas_coords = get_cell_atlas_coords(tile_pos)
 		var is_chest = [Vector2i(2, 1), Vector2i(0, 2), Vector2i(3, 6)].has(atlas_coords)
+		var is_boom = (atlas_coords == Vector2i(7, 5)) # 检查是否是炸药
 		if current > 0:
 			tile_data.set_custom_data_by_layer_id(health_layer_id, current)
 			health_manager.update_tile_health(tile_pos, current, total)
@@ -81,11 +82,16 @@ func dig_at(tile_pos: Vector2i) -> bool:
 			tile_max_health.erase(tile_pos)
 			if is_chest:
 				Global.currency += value # 挖掉宝箱加钱
+			elif is_boom:
+				# 触发爆炸效果
+				var explosion_radius = value # 使用value字段作为爆炸范围
+				var Bomb = load("res://Items/Bomb.tscn")
+				var bomb = Bomb.instantiate()
+				get_parent().add_child(bomb)
+				bomb.position = map_to_local(tile_pos)
+				# 设置爆炸范围
+				bomb.set_explosion_radius(explosion_radius)
+				# 立即引爆
+				bomb.explode()
 			return true
 	return false
-
-# 清空所有地形
-func clear_terrain():
-	# 遍历所有已用格子并清除
-	for cell in get_used_cells():
-		erase_cell(cell)

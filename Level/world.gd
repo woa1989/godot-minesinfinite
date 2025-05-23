@@ -4,7 +4,7 @@ extends Node2D
 const TileSetDataHelper = preload("res://Level/tileset_custom_data.gd")
 
 # 图块类型枚举
-enum {EMPTY, DIRT, CHEST1, CHEST2, CHEST3, LEFT_WALL, RIGHT_WALL, GROUND}
+enum {EMPTY, DIRT, CHEST1, CHEST2, CHEST3, GROUND, BOOM}
 
 # 图块类型与图集坐标映射
 var atlas_map := {
@@ -13,9 +13,8 @@ var atlas_map := {
 	CHEST1: Vector2i(2, 1),
 	CHEST2: Vector2i(0, 2),
 	CHEST3: Vector2i(3, 6),
-	LEFT_WALL: Vector2i(7, 0),
-	RIGHT_WALL: Vector2i(1, 4),
-	GROUND: Vector2i(0, 7)
+	GROUND: Vector2i(0, 7),
+	BOOM: Vector2i(7, 5)
 }
 
 # 地图参数
@@ -40,46 +39,60 @@ func _ready() -> void:
 		TileSetDataHelper.init_custom_data(tileset)
 	# 连接玩家挖掘信号
 	player.dig.connect(_on_player_dig)
-	# 初始加载区块
-	update_chunks()
+	
+	# 如果已有缓存的地图，则加载它
+	if Global.has_existing_mine:
+		load_cached_chunks()
+		player.global_position = Global.player_last_mine_position
+	else:
+		# 初始加载区块
+		update_chunks()
+		Global.has_existing_mine = true
+	
+func _exit_tree() -> void:
+	# 在离开场景时保存地图状态
+	save_chunks_to_cache()
+	# 保存玩家位置
+	Global.player_last_mine_position = player.global_position
 
-# 获取指定世界坐标对应的TileMap格子索引
-func get_tile_index(pos: Vector2) -> Vector2i:
-	var local_pos = dirt.to_local(pos)
-	return dirt.local_to_map(local_pos)
+# 保存所有已加载区块到缓存
+func save_chunks_to_cache():
+	Global.loaded_chunks_cache.clear()
+	for chunk_pos in loaded_chunks.keys():
+		var chunk_data = {}
+		var start_x = chunk_pos.x * CHUNK_SIZE
+		var start_y = chunk_pos.y * CHUNK_SIZE
+		for y in range(CHUNK_SIZE):
+			for x in range(CHUNK_SIZE):
+				var world_x = start_x + x
+				var world_y = start_y + y
+				var pos = Vector2i(world_x, world_y)
+				var tile_data = dirt.get_cell_tile_data(pos)
+				if tile_data:
+					var atlas_coords = dirt.get_cell_atlas_coords(pos)
+					var health = tile_data.get_custom_data("health")
+					var value = tile_data.get_custom_data("value")
+					chunk_data[pos] = {
+						"atlas_coords": atlas_coords,
+						"health": health,
+						"value": value
+					}
+		if not chunk_data.is_empty():
+			Global.loaded_chunks_cache[chunk_pos] = chunk_data
 
-# 获取指定格子的内容（类型）
-func get_tile_contents(index: Vector2) -> Object:
-	var tile = Global.Tile.new()
-	var cell_coords = dirt.get_cell_atlas_coords(index)
-	if cell_coords == Vector2i(-1, -1):
-		tile.tile_type = Global.TileType.EMPTY
-		return tile
-	var dirt_value = atlas_map.find_key(cell_coords)
-	match dirt_value:
-		DIRT:
-			tile.tile_type = Global.TileType.DIRT
-		LEFT_WALL:
-			tile.tile_type = Global.TileType.LEFT_WALL
-		RIGHT_WALL:
-			tile.tile_type = Global.TileType.RIGHT_WALL
-		CHEST1:
-			tile.tile_type = Global.TileType.CHEST1
-		CHEST2:
-			tile.tile_type = Global.TileType.CHEST2
-		CHEST3:
-			tile.tile_type = Global.TileType.CHEST3
-		_:
-			tile.tile_type = Global.TileType.EMPTY
-	return tile
-
-# 执行挖掘（直接擦除格子）
-func mine_tile(index: Vector2):
-	dirt.erase_cell(index)
-
-# 清空所有地形
-func clear_terrain():
-	dirt.clear()
+# 从缓存加载区块
+func load_cached_chunks():
+	loaded_chunks.clear()
+	for chunk_pos in Global.loaded_chunks_cache:
+		var chunk_data = Global.loaded_chunks_cache[chunk_pos]
+		for pos in chunk_data:
+			var tile_info = chunk_data[pos]
+			dirt.set_cell(pos, 0, tile_info.atlas_coords)
+			var tile_data = dirt.get_cell_tile_data(pos)
+			if tile_data:
+				tile_data.set_custom_data("health", tile_info.health)
+				tile_data.set_custom_data("value", tile_info.value)
+		loaded_chunks[chunk_pos] = true
 
 # 世界坐标转区块坐标
 func world_to_chunk(world_pos: Vector2) -> Vector2i:
@@ -117,6 +130,20 @@ func update_chunks():
 func generate_chunk(chunk_pos: Vector2i):
 	if loaded_chunks.has(chunk_pos):
 		return
+	# 如果缓存中有这个区块，就从缓存加载
+	if Global.loaded_chunks_cache.has(chunk_pos):
+		var chunk_data = Global.loaded_chunks_cache[chunk_pos]
+		for pos in chunk_data:
+			var tile_info = chunk_data[pos]
+			dirt.set_cell(pos, 0, tile_info.atlas_coords)
+			var tile_data = dirt.get_cell_tile_data(pos)
+			if tile_data:
+				tile_data.set_custom_data("health", tile_info.health)
+				tile_data.set_custom_data("value", tile_info.value)
+		loaded_chunks[chunk_pos] = true
+		return
+		
+	# 否则生成新区块
 	var tileset = dirt.tile_set
 	var custom_data_layers = {}
 	for i in range(tileset.get_custom_data_layers_count()):
@@ -172,6 +199,13 @@ func generate_chunk(chunk_pos: Vector2i):
 					if tile_data and health_layer >= 0 and value_layer >= 0:
 						tile_data.set_custom_data_by_layer_id(health_layer, chest_health)
 						tile_data.set_custom_data_by_layer_id(value_layer, chest_value)
+				# 3%概率生成炸药
+				elif world_y > 3 and rand_val > 0.97:
+					dirt.set_cell(pos, 0, atlas_map[BOOM])
+					var tile_data = dirt.get_cell_tile_data(pos)
+					if tile_data and health_layer >= 0 and value_layer >= 0:
+						tile_data.set_custom_data_by_layer_id(health_layer, 1) # 血量设为1
+						tile_data.set_custom_data_by_layer_id(value_layer, 96) # value用于存储爆炸范围
 	loaded_chunks[chunk_pos] = true
 	
 
