@@ -22,8 +22,12 @@ func trigger_explosion(tile_pos: Vector2i, _radius: float):
 	bomb.global_position = global_pos
 	print("[Map] 触发炸药爆炸: 瓦片位置=", tile_pos, " 全局位置=", global_pos)
 	# 设置固定的爆炸范围和伤害
-	bomb.set_explosion_radius(96.0) # 设置为64 * 1.5，刚好覆盖3x3范围
-	bomb.set_damage(2) # 固定的伤害值
+	# 设置炸弹配置
+	var config = BombConfig.new()
+	config.explosion_radius = 96.0 # 设置为64 * 1.5，刚好覆盖3x3范围
+	config.damage = 2 # 固定的伤害值
+	config.chain_explosion_multiplier = 1.2 # 连锁爆炸倍数
+	bomb.config = config # 应用配置
 	# 立即引爆
 	bomb.explode()
 
