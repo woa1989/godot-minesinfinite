@@ -18,11 +18,16 @@ config/icon="res://icon.svg"
 [autoload]
 
 Global="*res://Global/Global.tscn"
+DebugMenu="*res://addons/debug_menu/debug_menu.tscn"
 
 [display]
 
 window/size/viewport_width=1920
 window/size/viewport_height=1080
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/debug_menu/plugin.cfg")
 
 [input]
 
