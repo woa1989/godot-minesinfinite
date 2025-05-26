@@ -40,6 +40,8 @@ var default_vars := [0, 0, 0] # 只在 _ready 赋值，无需初始化为 [0,0,0
 
 var chests_collected = [0, 0, 0] # 对应三种宝箱的收集数量
 
+var current_map_id = "mine" # 当前地图ID
+
 func buy_item(item: ShopItem) -> bool:
 	if currency >= shop_prices[item]:
 		currency -= shop_prices[item]

@@ -36,3 +36,20 @@ static func init_custom_data(tileset: TileSet):
 		print("[TileSet] 添加了自定义数据层: value")
 	
 	return {"health_id": health_layer_id, "value_id": value_layer_id}
+
+# 获取自定义数据层的ID
+static func get_custom_data_layer_ids(tileset: TileSet) -> Dictionary:
+	var result = {
+		"health": - 1,
+		"value": - 1
+	}
+	
+	# 查找自定义数据层
+	for i in range(tileset.get_custom_data_layers_count()):
+		var layer_name = tileset.get_custom_data_layer_name(i)
+		if layer_name == "health":
+			result.health = i
+		elif layer_name == "value":
+			result.value = i
+	
+	return result

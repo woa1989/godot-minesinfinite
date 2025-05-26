@@ -11,6 +11,22 @@ var health_manager: Node2D # 血条管理器
 var current_dig_pos: Vector2i = Vector2i.ZERO # 当前正在挖掘的位置
 var tile_max_health = {} # 存储每个位置的最大血量
 
+# 新增：触发炸药爆炸
+func trigger_explosion(tile_pos: Vector2i, _radius: float):
+	var Bomb = load("res://Items/Bomb.tscn")
+	var bomb = Bomb.instantiate()
+	get_parent().add_child(bomb)
+	# 使用正确的坐标转换
+	var local_pos = map_to_local(tile_pos)
+	var global_pos = to_global(local_pos)
+	bomb.global_position = global_pos
+	print("[Map] 触发炸药爆炸: 瓦片位置=", tile_pos, " 全局位置=", global_pos)
+	# 设置固定的爆炸范围和伤害
+	bomb.set_explosion_radius(96.0) # 设置为64 * 1.5，刚好覆盖3x3范围
+	bomb.set_damage(2) # 固定的伤害值
+	# 立即引爆
+	bomb.explode()
+
 func _ready():
 	# 创建冷却计时器
 	cooldown_timer = Timer.new()
@@ -70,12 +86,39 @@ func dig_at(tile_pos: Vector2i) -> bool:
 		if health < 0:
 			return false # 不可破坏
 		var atlas_coords = get_cell_atlas_coords(tile_pos)
-		var is_chest = [Vector2i(2, 1), Vector2i(0, 2), Vector2i(3, 6)].has(atlas_coords)
-		var is_boom = (atlas_coords == Vector2i(7, 5)) # 检查是否是炸药
+		
+		# 获取当前地图的atlas_map配置
+		var world_node = get_parent()
+		var is_chest = false
+		var is_boom = false
+		
+		# 检查是否是宝箱或炸药
+		if "atlas_map" in world_node and "CHEST1" in world_node and "CHEST2" in world_node and "CHEST3" in world_node and "BOOM" in world_node:
+			is_chest = [
+				world_node.atlas_map[world_node.CHEST1],
+				world_node.atlas_map[world_node.CHEST2],
+				world_node.atlas_map[world_node.CHEST3]
+			].has(atlas_coords)
+			is_boom = (atlas_coords == world_node.atlas_map[world_node.BOOM]) # 检查是否是炸药
+			print("[Map] 检查炸药块: atlas_coords=", atlas_coords, " boom_coords=", world_node.atlas_map[world_node.BOOM], " is_boom=", is_boom)
+		else:
+			# 回退到默认值
+			is_chest = [Vector2i(2, 1), Vector2i(0, 2), Vector2i(3, 6)].has(atlas_coords)
+			is_boom = (atlas_coords == Vector2i(7, 5))
 		if current > 0:
-			tile_data.set_custom_data_by_layer_id(health_layer_id, current)
-			health_manager.update_tile_health(tile_pos, current, total)
-			return true
+			# 如果这是炸药块，每次受伤都会引爆
+			if is_boom:
+				erase_cell(tile_pos)
+				health_manager.remove_health_bar(tile_pos)
+				tile_max_health.erase(tile_pos)
+				# 触发爆炸效果
+				var explosion_radius = value # 使用value字段作为爆炸范围
+				trigger_explosion(tile_pos, explosion_radius)
+				return true
+			else:
+				tile_data.set_custom_data_by_layer_id(health_layer_id, current)
+				health_manager.update_tile_health(tile_pos, current, total)
+				return true
 		else:
 			erase_cell(tile_pos)
 			health_manager.remove_health_bar(tile_pos)
@@ -88,7 +131,13 @@ func dig_at(tile_pos: Vector2i) -> bool:
 				var Bomb = load("res://Items/Bomb.tscn")
 				var bomb = Bomb.instantiate()
 				get_parent().add_child(bomb)
-				bomb.position = map_to_local(tile_pos)
+				
+				# 计算炸药块的全局位置
+				var local_pos = map_to_local(tile_pos)
+				var global_pos = to_global(local_pos)
+				bomb.global_position = global_pos
+				print("[Map] 炸药爆炸: 瓦片坐标=", tile_pos, " 全局位置=", global_pos)
+				
 				# 设置爆炸范围
 				bomb.set_explosion_radius(explosion_radius)
 				# 立即引爆

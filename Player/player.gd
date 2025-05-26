@@ -2,14 +2,9 @@ extends CharacterBody2D
 
 # 信号
 signal dig(tile_pos: Vector2i, direction: String) # 挖掘信号
-signal slide() # 滑铲信号
-
 # 主要参数
 const MOVE_SPEED = 180.0 # 水平移动速度
 const JUMP_VELOCITY = -300.0 # 跳跃初速度
-const SLIDE_SPEED = 500.0 # 滑铲速度
-const SLIDE_TIME = 0.25 # 滑铲持续时间
-const SLIDE_COOLDOWN = 0.6 # 滑铲冷却
 const BOMB_THROW_FORCE = Vector2(200, -200) # 炸弹投掷力度
 const Bomb = preload("res://Items/Bomb.tscn")
 var GRAVITY = 1200.0 # 重力（启动时赋值）
@@ -17,9 +12,6 @@ var GRAVITY = 1200.0 # 重力（启动时赋值）
 # 状态变量
 var player_velocity: Vector2 = Vector2.ZERO # 玩家速度
 var can_double_jump: bool = true # 是否可以二段跳
-var is_sliding: bool = false # 是否处于滑铲
-var slide_timer: float = 0.0 # 滑铲计时
-var slide_cooldown: float = 0.0 # 滑铲冷却计时
 var on_wall: bool = false # 是否贴墙
 var wall_dir: int = 0 # -1左墙 1右墙
 var wall_jump_ready: bool = false # 是否可以爬墙/墙跳
@@ -73,37 +65,7 @@ func _physics_process(delta):
 	# 墙跳冷却
 	if wall_jump_cooldown > 0:
 		wall_jump_cooldown -= delta
-
-	# 滑铲冷却
-	if slide_cooldown > 0:
-		slide_cooldown -= delta
-
-	# 滑铲逻辑
-	if not is_sliding and slide_cooldown <= 0 and on_floor and Input.is_action_pressed("down") and input_dir != 0:
-		is_sliding = true
-		slide_timer = SLIDE_TIME
-		slide_cooldown = SLIDE_COOLDOWN
-		player_velocity.x = input_dir * SLIDE_SPEED
-		$AnimatedSprite2D.play("sliding")
-		emit_signal("slide")
-		if $AudioStreamPlayer2D:
-			$AudioStreamPlayer2D.play()
-
-	if is_sliding:
-		slide_timer -= delta
-		if slide_timer <= 0:
-			is_sliding = false
-			$AnimatedSprite2D.play("idle")
-		else:
-			velocity = player_velocity
-			move_and_slide()
-			if not Input.is_action_pressed("down"):
-				is_sliding = false
-				$AnimatedSprite2D.play("idle")
-			return
-
-	# 按键移动（无惯性，松开立即停）
-	if not is_sliding and not mining:
+	if not mining:
 		if input_dir != 0:
 			player_velocity.x = input_dir * MOVE_SPEED
 			$AnimatedSprite2D.scale.x = input_dir

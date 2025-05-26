@@ -1,7 +1,6 @@
-[gd_resource type="TileSet" load_steps=5 format=3 uid="uid://68n5bu7w3mvq"]
+[gd_resource type="TileSet" load_steps=3 format=3 uid="uid://68n5bu7w3mvq"]
 
 [ext_resource type="Texture2D" uid="uid://dgep4m2ygvkmv" path="res://Level/tiles.png" id="1_dugj6"]
-[ext_resource type="Texture2D" uid="uid://xrat147blf1c" path="res://Assets/newmap.png" id="2_5jl6h"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_qmtf6"]
 texture = ExtResource("1_dugj6")
@@ -97,60 +96,6 @@ texture_region_size = Vector2i(64, 64)
 3:5/0 = 0
 3:5/0/physics_layer_0/polygon_0/points = PackedVector2Array(-32, -32, 32, -32, 32, 32, -32, 32)
 
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_4bqaw"]
-texture = ExtResource("2_5jl6h")
-margins = Vector2i(1, 1)
-separation = Vector2i(2, 2)
-texture_region_size = Vector2i(64, 64)
-6:0/0 = 0
-7:0/0 = 0
-8:0/0 = 0
-3:1/0 = 0
-3:1/0/terrain_set = 0
-3:1/0/terrain = 0
-3:1/0/terrains_peering_bit/right_side = 0
-4:1/0 = 0
-4:1/0/terrain_set = 0
-4:1/0/terrain = 0
-4:1/0/terrains_peering_bit/right_side = 0
-4:1/0/terrains_peering_bit/left_side = 0
-5:1/0 = 0
-5:1/0/terrain_set = 0
-5:1/0/terrain = 0
-5:1/0/terrains_peering_bit/left_side = 0
-8:1/0 = 0
-8:1/0/terrain_set = 0
-8:1/0/terrain = 0
-8:1/0/terrains_peering_bit/right_side = 0
-9:1/0 = 0
-9:1/0/terrain_set = 0
-9:1/0/terrain = 0
-9:1/0/terrains_peering_bit/right_side = 0
-9:1/0/terrains_peering_bit/left_side = 0
-10:1/0 = 0
-10:1/0/terrain_set = 0
-10:1/0/terrain = 0
-10:1/0/terrains_peering_bit/right_side = 0
-10:1/0/terrains_peering_bit/left_side = 0
-11:1/0 = 0
-11:1/0/terrain_set = 0
-11:1/0/terrain = 0
-11:1/0/terrains_peering_bit/right_side = 0
-11:1/0/terrains_peering_bit/left_side = 0
-12:1/0 = 0
-12:1/0/terrain_set = 0
-12:1/0/terrain = 0
-12:1/0/terrains_peering_bit/right_side = 0
-12:1/0/terrains_peering_bit/left_side = 0
-7:10/0 = 0
-8:10/0 = 0
-9:10/0 = 0
-10:10/0 = 0
-11:10/0 = 0
-12:10/0 = 0
-13:10/0 = 0
-14:10/0 = 0
-
 [resource]
 tile_size = Vector2i(64, 64)
 physics_layer_0/collision_layer = 1
@@ -158,4 +103,3 @@ terrain_set_0/mode = 0
 terrain_set_0/terrain_0/name = "Terrain 0"
 terrain_set_0/terrain_0/color = Color(0.189484, 0.0985291, 0.723864, 1)
 sources/0 = SubResource("TileSetAtlasSource_qmtf6")
-sources/1 = SubResource("TileSetAtlasSource_4bqaw")
