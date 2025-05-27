@@ -1,10 +1,16 @@
-[gd_scene load_steps=6 format=3 uid="uid://ty4ric6yq3uf"]
+[gd_scene load_steps=7 format=3 uid="uid://ty4ric6yq3uf"]
 
 [ext_resource type="Script" uid="uid://bagrurhhi5clq" path="res://Level/world.gd" id="1_qmtf6"]
-[ext_resource type="TileSet" uid="uid://c10ejfn0y3y3r" path="res://Level/level2.tres" id="3_iincs"]
+[ext_resource type="TileSet" uid="uid://d83tfrek8bwf" path="res://Level/level4.tres" id="3_iincs"]
 [ext_resource type="Script" uid="uid://dbiu48lq8il7q" path="res://Level/map.gd" id="4_iincs"]
 [ext_resource type="Script" uid="uid://f2ww6w12w4gp" path="res://Level/level.gd" id="5_level"]
 [ext_resource type="PackedScene" uid="uid://bf8daa6ebu7bo" path="res://Player/Player.tscn" id="16_uqeto"]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_iincs"]
+seed = 123456
+frequency = 0.03
+fractal_octaves = 2
+fractal_gain = 0.4
 
 [node name="Level" type="Node2D"]
 script = ExtResource("5_level")
@@ -13,12 +19,17 @@ script = ExtResource("5_level")
 position = Vector2(0, 100)
 scale = Vector2(0.64, 0.64)
 script = ExtResource("1_qmtf6")
+noise = SubResource("FastNoiseLite_iincs")
 
 [node name="LoadingCamera" type="Camera2D" parent="World"]
 enabled = false
 zoom = Vector2(2, 2)
 
 [node name="Dirt" type="TileMapLayer" parent="World"]
+tile_set = ExtResource("3_iincs")
+script = ExtResource("4_iincs")
+
+[node name="Props" type="TileMapLayer" parent="World"]
 tile_set = ExtResource("3_iincs")
 script = ExtResource("4_iincs")
 

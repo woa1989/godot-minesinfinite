@@ -53,21 +53,42 @@ func _on_cooldown_timeout():
 func can_dig_at(tile_pos: Vector2i) -> bool:
 	if not can_dig:
 		return false
-	var tile_data = get_cell_tile_data(tile_pos)
-	return tile_data != null
+	# 检查土壤层或道具层是否有瓦片
+	var dirt_data = get_cell_tile_data(tile_pos)
+	var props_layer = get_parent().get_node("Props") as TileMapLayer
+	var props_data = props_layer.get_cell_tile_data(tile_pos) if props_layer else null
+	return dirt_data != null or props_data != null
 
 # 在指定位置执行挖掘
 func dig_at(tile_pos: Vector2i) -> bool:
 	if not can_dig_at(tile_pos):
 		return false
+		
 	current_dig_pos = tile_pos
 	can_dig = false
 	cooldown_timer.start()
-
-	var tile_data = get_cell_tile_data(tile_pos)
-	if not tile_data:
+	
+	# 获取道具层引用
+	var props_layer = get_parent().get_node("Props") as TileMapLayer
+	if not props_layer:
+		push_error("无法找到Props层!")
 		return false
+	
+	# 检查两个层的瓦片数据
+	var dirt_data = get_cell_tile_data(tile_pos)
+	var props_data = props_layer.get_cell_tile_data(tile_pos)
+	
+	# 优先处理道具层
+	if props_data:
+		return process_tile_damage(tile_pos, props_layer, props_data)
+	# 如果没有道具，处理土壤层
+	elif dirt_data:
+		return process_tile_damage(tile_pos, self, dirt_data)
+	
+	return false
 
+# 处理瓦片伤害
+func process_tile_damage(tile_pos: Vector2i, layer: TileMapLayer, tile_data: TileData) -> bool:
 	# 获取自定义数据层id
 	var tileset = tile_set
 	var health_layer_id = -1
@@ -78,7 +99,7 @@ func dig_at(tile_pos: Vector2i) -> bool:
 			health_layer_id = i
 		elif layer_name == "value":
 			value_layer_id = i
-
+	
 	# 读取血量和价值
 	if health_layer_id >= 0 and value_layer_id >= 0:
 		var health = tile_data.get_custom_data_by_layer_id(health_layer_id)
@@ -89,34 +110,34 @@ func dig_at(tile_pos: Vector2i) -> bool:
 		var current = health - 1
 		if health < 0:
 			return false # 不可破坏
-		var atlas_coords = get_cell_atlas_coords(tile_pos)
-		
-		# 获取当前地图的atlas_map配置
+			
+		var atlas_coords = layer.get_cell_atlas_coords(tile_pos)
 		var world_node = get_parent()
+		
+		# 检查是否是宝箱或炸药
 		var is_chest = false
 		var is_boom = false
 		
-		# 检查是否是宝箱或炸药
 		if "atlas_map" in world_node and "CHEST1" in world_node and "CHEST2" in world_node and "CHEST3" in world_node and "BOOM" in world_node:
 			is_chest = [
 				world_node.atlas_map[world_node.CHEST1],
 				world_node.atlas_map[world_node.CHEST2],
 				world_node.atlas_map[world_node.CHEST3]
 			].has(atlas_coords)
-			is_boom = (atlas_coords == world_node.atlas_map[world_node.BOOM]) # 检查是否是炸药
+			is_boom = (atlas_coords == world_node.atlas_map[world_node.BOOM])
 			print("[Map] 检查炸药块: atlas_coords=", atlas_coords, " boom_coords=", world_node.atlas_map[world_node.BOOM], " is_boom=", is_boom)
-		else:
-			# 回退到默认值
-			is_chest = [Vector2i(2, 1), Vector2i(0, 2), Vector2i(3, 6)].has(atlas_coords)
-			is_boom = (atlas_coords == Vector2i(7, 5))
+		
 		if current > 0:
 			# 如果这是炸药块，每次受伤都会引爆
 			if is_boom:
-				erase_cell(tile_pos)
+				# 清除两个层的瓦片
+				layer.erase_cell(tile_pos)
+				if layer != self:
+					erase_cell(tile_pos)
 				health_manager.remove_health_bar(tile_pos)
 				tile_max_health.erase(tile_pos)
 				# 触发爆炸效果
-				var explosion_radius = value # 使用value字段作为爆炸范围
+				var explosion_radius = value
 				trigger_explosion(tile_pos, explosion_radius)
 				return true
 			else:
@@ -124,27 +145,27 @@ func dig_at(tile_pos: Vector2i) -> bool:
 				health_manager.update_tile_health(tile_pos, current, total)
 				return true
 		else:
-			erase_cell(tile_pos)
+			# 清除两个层的瓦片
+			layer.erase_cell(tile_pos)
+			if layer != self:
+				erase_cell(tile_pos)
 			health_manager.remove_health_bar(tile_pos)
 			tile_max_health.erase(tile_pos)
+			
 			if is_chest:
-				Global.currency += value # 挖掉宝箱加钱
+				Global.currency += value
+				# 如果是Props层的宝箱被摧毁，同时清除Dirt层相同位置的土块
+				if layer.name == "Props":
+					var dirt_layer = get_parent().get_node("Dirt") as TileMapLayer
+					if dirt_layer and dirt_layer.get_cell_source_id(tile_pos) != -1:
+						dirt_layer.erase_cell(tile_pos)
+						# 如果Dirt层有血条，也要移除
+						if "health_manager" in dirt_layer:
+							dirt_layer.health_manager.remove_health_bar(tile_pos)
+						print("[Map] 宝箱被摧毁，同时清除同位置土块: ", tile_pos)
 			elif is_boom:
-				# 触发爆炸效果
-				var explosion_radius = value # 使用value字段作为爆炸范围
-				var Bomb = load("res://Items/Bomb.tscn")
-				var bomb = Bomb.instantiate()
-				get_parent().add_child(bomb)
-				
-				# 计算炸药块的全局位置
-				var local_pos = map_to_local(tile_pos)
-				var global_pos = to_global(local_pos)
-				bomb.global_position = global_pos
-				print("[Map] 炸药爆炸: 瓦片坐标=", tile_pos, " 全局位置=", global_pos)
-				
-				# 设置爆炸范围
-				bomb.set_explosion_radius(explosion_radius)
-				# 立即引爆
-				bomb.explode()
+				var explosion_radius = value
+				trigger_explosion(tile_pos, explosion_radius)
 			return true
+			
 	return false

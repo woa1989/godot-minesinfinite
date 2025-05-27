@@ -17,7 +17,7 @@ static var MAPS = {
 		"description": "挖掘矿物的地方",
 		"atlas_map": {
 			EMPTY: null,
-			DIRT: Vector2i(5, 0),
+			DIRT: Vector2i(4, 0),
 			CHEST1: Vector2i(2, 1),
 			CHEST2: Vector2i(0, 2),
 			CHEST3: Vector2i(3, 6),
@@ -41,16 +41,16 @@ static var MAPS = {
 	},
 	"地下城": {
 		"id": "dungeon",
-		"tilemap": preload("res://Level/level.tres"), # 可以替换成新的tileset
+		"tilemap": preload("res://Level/level4.tres"), # 可以替换成新的tileset
 		"description": "充满危险的地下城",
 		"atlas_map": {
 			EMPTY: null,
-			DIRT: Vector2i(3, 0), # 使用不同的地形纹理
-			CHEST1: Vector2i(2, 1),
-			CHEST2: Vector2i(0, 2),
-			CHEST3: Vector2i(3, 6),
-			GROUND: Vector2i(2, 7), # 不同的地面纹理
-			BOOM: Vector2i(7, 5)
+			DIRT: Vector2i(4, 1), # 使用不同的地形纹理
+			CHEST1: Vector2i(3, 1),
+			CHEST2: Vector2i(5, 1),
+			CHEST3: Vector2i(5, 0),
+			GROUND: Vector2i(0, 2), # 不同的地面纹理
+			BOOM: Vector2i(3, 0)
 		}
 	}
 }

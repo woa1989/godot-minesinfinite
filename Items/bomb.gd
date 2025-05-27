@@ -19,7 +19,8 @@ signal exploded # 爆炸信号
 var time_left: float # 爆炸倒计时
 var explosion_radius: float # 爆炸范围
 var damage: int # 爆炸伤害
-var dirt: TileMapLayer # 地图图层引用
+var dirt: TileMapLayer # 地形层引用
+var props: TileMapLayer # 道具层引用
 var world: Node2D # 世界节点引用
 var is_exploding := false # 防止重复爆炸
 var show_debug := false # 调试模式开关
@@ -54,8 +55,11 @@ func _load_config() -> void:
 func _init_nodes() -> void:
 	world = get_parent()
 	dirt = get_node_or_null("/root/Level/World/Dirt") as TileMapLayer
+	props = get_node_or_null("/root/Level/World/Props") as TileMapLayer
 	if not dirt:
 		push_error("无法找到Dirt节点，请确认节点路径是否正确")
+	if not props:
+		push_error("无法找到Props节点，请确认节点路径是否正确")
 
 ## 设置物理属性
 func _setup_physics() -> void:
@@ -123,30 +127,51 @@ func _get_affected_tiles() -> Array[Vector2i]:
 
 ## 处理单个瓦片
 func _process_tile(tile_pos: Vector2i) -> void:
-	# 检查该位置是否有瓦片
-	var source_id: int = dirt.get_cell_source_id(tile_pos)
-	if source_id == -1:
-		return
-	
 	print("[Bomb] 检查坐标: ", tile_pos)
 	
-	var tile_data: TileData = dirt.get_cell_tile_data(tile_pos)
-	if not tile_data:
+	# 检查props层（优先）
+	var props_source_id: int = props.get_cell_source_id(tile_pos)
+	var props_data: TileData = props.get_cell_tile_data(tile_pos) if props_source_id != -1 else null
+	
+	# 检查dirt层
+	var dirt_source_id: int = dirt.get_cell_source_id(tile_pos)
+	var dirt_data: TileData = dirt.get_cell_tile_data(tile_pos) if dirt_source_id != -1 else null
+	
+	# 如果两个层都没有方块，则返回
+	if props_source_id == -1 and dirt_source_id == -1:
 		return
 	
-	# 处理炸弹和炸药块
+	# 处理炸弹和炸药块（两个层都要检查）
 	if _handle_explosives(tile_pos):
 		return
 	
-	# 处理普通方块
-	_handle_regular_block(tile_pos, tile_data)
+	# 先处理props层的方块
+	if props_data:
+		_handle_regular_block(tile_pos, props_data, props)
+	# 再处理dirt层的方块
+	elif dirt_data:
+		_handle_regular_block(tile_pos, dirt_data, dirt)
 
 ## 处理爆炸物（炸弹和炸药块）
 func _handle_explosives(tile_pos: Vector2i) -> bool:
-	# 检查是否是炸药块
-	var atlas_coords: Vector2i = dirt.get_cell_atlas_coords(tile_pos)
 	var boom_coords: Vector2i = world.atlas_map[world.BOOM] if "atlas_map" in world and "BOOM" in world else Vector2i(7, 5)
-	var is_boom: bool = atlas_coords == boom_coords
+	var is_boom_in_dirt: bool = false
+	var is_boom_in_props: bool = false
+	var boom_layer: TileMapLayer = null
+	
+	# 检查dirt层是否是炸药块
+	var dirt_atlas_coords: Vector2i = dirt.get_cell_atlas_coords(tile_pos)
+	if dirt.get_cell_source_id(tile_pos) != -1:
+		is_boom_in_dirt = (dirt_atlas_coords == boom_coords)
+		if is_boom_in_dirt:
+			boom_layer = dirt
+	
+	# 检查props层是否是炸药块
+	var props_atlas_coords: Vector2i = props.get_cell_atlas_coords(tile_pos)
+	if props.get_cell_source_id(tile_pos) != -1:
+		is_boom_in_props = (props_atlas_coords == boom_coords)
+		if is_boom_in_props:
+			boom_layer = props
 	
 	# 检查该位置是否有其他炸弹
 	var bomb_at_pos: Node = _find_bomb_at_position(tile_pos)
@@ -156,8 +181,8 @@ func _handle_explosives(tile_pos: Vector2i) -> bool:
 		bomb_at_pos.explode()
 		return true
 	
-	if is_boom:
-		_trigger_chain_explosion(tile_pos)
+	if is_boom_in_dirt or is_boom_in_props:
+		_trigger_chain_explosion(tile_pos, boom_layer)
 		return true
 	
 	return false
@@ -166,52 +191,71 @@ func _handle_explosives(tile_pos: Vector2i) -> bool:
 func _find_bomb_at_position(tile_pos: Vector2i) -> Node:
 	var bombs: Array = get_tree().get_nodes_in_group("bombs")
 	for bomb in bombs:
-		if dirt.local_to_map(dirt.to_local(bomb.global_position)) == tile_pos and bomb != self:
+		var bomb_tile_pos = dirt.local_to_map(dirt.to_local(bomb.global_position))
+		if bomb_tile_pos == tile_pos and bomb != self:
 			return bomb
 	return null
 
 ## 触发连锁爆炸
-func _trigger_chain_explosion(tile_pos: Vector2i) -> void:
+func _trigger_chain_explosion(tile_pos: Vector2i, layer: TileMapLayer = null) -> void:
 	print("[Bomb] 引爆炸药块: ", tile_pos)
-	dirt.erase_cell(tile_pos)
+	
+	# 如果没有指定层，默认使用dirt
+	if layer == null:
+		layer = dirt
+	
+	# 清除炸药块
+	layer.erase_cell(tile_pos)
 	
 	var new_bomb: Node = load("res://Items/Bomb.tscn").instantiate()
 	get_parent().add_child(new_bomb)
-	new_bomb.global_position = dirt.to_global(dirt.map_to_local(tile_pos))
+	new_bomb.global_position = layer.to_global(layer.map_to_local(tile_pos))
 	
 	# 设置更大的爆炸范围
 	new_bomb.explosion_radius = explosion_radius * config.chain_explosion_multiplier
 	new_bomb.call_deferred("explode")
 
 ## 处理普通方块
-func _handle_regular_block(tile_pos: Vector2i, tile_data: TileData) -> void:
+func _handle_regular_block(tile_pos: Vector2i, tile_data: TileData, layer: TileMapLayer = null) -> void:
+	# 如果没有指定层，默认使用dirt
+	if layer == null:
+		layer = dirt
+		
 	# 对方块造成伤害
 	var current_health: int = tile_data.get_custom_data("health") if tile_data else 1
 	var health: int = current_health - damage
 	print("[Bomb] 方块血量变化: ", tile_pos, " ", health + damage, " -> ", health)
 	
 	if health <= 0:
-		_destroy_block(tile_pos)
+		_destroy_block(tile_pos, layer)
 	else:
-		_update_block_health(tile_pos, tile_data, health)
+		_update_block_health(tile_pos, tile_data, health, layer)
 
 ## 销毁方块
-func _destroy_block(tile_pos: Vector2i) -> void:
-	dirt.erase_cell(tile_pos)
-	if "health_manager" in dirt:
-		dirt.health_manager.remove_health_bar(tile_pos)
+func _destroy_block(tile_pos: Vector2i, layer: TileMapLayer = null) -> void:
+	# 如果没有指定层，默认使用dirt
+	if layer == null:
+		layer = dirt
+		
+	layer.erase_cell(tile_pos)
+	if "health_manager" in layer:
+		layer.health_manager.remove_health_bar(tile_pos)
 	print("[Bomb] 销毁方块: ", tile_pos)
 
 ## 更新方块血量
-func _update_block_health(tile_pos: Vector2i, tile_data: TileData, health: int) -> void:
+func _update_block_health(tile_pos: Vector2i, tile_data: TileData, health: int, layer: TileMapLayer = null) -> void:
+	# 如果没有指定层，默认使用dirt
+	if layer == null:
+		layer = dirt
+		
 	tile_data.set_custom_data("health", health)
 	
 	# 更新血条显示
-	if "health_manager" in dirt:
-		if not dirt.tile_max_health.has(tile_pos):
-			dirt.tile_max_health[tile_pos] = tile_data.get_custom_data("health") + damage
-		var total: int = dirt.tile_max_health[tile_pos]
-		dirt.health_manager.update_tile_health(tile_pos, health, total)
+	if "health_manager" in layer:
+		if not layer.tile_max_health.has(tile_pos):
+			layer.tile_max_health[tile_pos] = tile_data.get_custom_data("health") + damage
+		var total: int = layer.tile_max_health[tile_pos]
+		layer.health_manager.update_tile_health(tile_pos, health, total)
 
 ## 播放爆炸效果
 func _play_explosion_effects() -> void:
