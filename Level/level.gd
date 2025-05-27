@@ -52,7 +52,7 @@ func init_map():
 		
 		# 如果已有缓存的地图,则加载它
 		if Global.has_existing_mine:
-			$World.load_cached_chunks()
+			$World._load_cached_chunks() # 修正：使用正确的函数名
 			%Player.global_position = Global.player_last_mine_position
 		else:
 			# 重置玩家位置
