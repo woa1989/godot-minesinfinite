@@ -4,7 +4,7 @@ extends TileMapLayer
 const DIGGABLE_LAYER = 0
 # 挖掘冷却时间（秒）
 const DIG_COOLDOWN = 0.5
-
+#set_cells_terrain_connect # 是否连接相邻瓦片的地形
 var can_dig := true # 是否可以挖掘
 var cooldown_timer: Timer # 冷却计时器
 var health_manager: Node2D # 血条管理器
