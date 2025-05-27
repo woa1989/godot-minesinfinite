@@ -19,9 +19,9 @@ enum {
 @export var noise: FastNoiseLite # 噪声生成器
 @export_group("洞穴生成参数")
 @export var enable_caves: bool = true # 是否启用洞穴生成
-@export_range(0.0, 1.0) var cave_threshold: float = 0.3 # 洞穴生成阈值（越小空洞越多）
-@export_range(0.0, 0.1) var depth_factor_rate: float = 0.0005 # 深度影响因子（越大深处空洞越多）
-@export_range(0.0, 1.0) var max_depth_effect: float = 0 # 深度最大影响值
+@export_range(0.0, 1.0) var cave_threshold: float = 0.4 # 洞穴生成阈值（越小空洞越多）
+@export_range(0.0, 0.1) var depth_factor_rate: float = 0.0001 # 深度影响因子（越大深处空洞越多）
+@export_range(0.0, 1.0) var max_depth_effect: float = 0.1 # 深度最大影响值
 
 # === 地图尺寸常量 ===
 const TILE_SIZE := 64 # 单个瓦片像素大小
@@ -47,9 +47,23 @@ var current_chunk = Vector2i.ZERO # 当前玩家所在区块
 
 # === 地图初始化 ===
 func _ready() -> void:
+	_configure_noise()
 	set_current_map(current_map_id) # 不需要await
 	player.dig.connect(_on_player_dig)
 	_init_map_loading()
+
+# === 噪声配置 ===
+func _configure_noise() -> void:
+	if not noise:
+		noise = FastNoiseLite.new()
+	
+	# 配置噪声参数
+	noise.noise_type = FastNoiseLite.TYPE_PERLIN
+	noise.seed = randi() # 随机种子
+	noise.frequency = 0.6 # 控制噪声的"粒度"，值越大，变化越剧烈
+	noise.fractal_octaves = 2 # 使用较少的叠加层，让洞穴形状更简单
+	noise.fractal_gain = 0.3 # 降低细节的影响
+	noise.fractal_lacunarity = 2.0 # 控制不同层级之间的频率变化
 
 # === 地图设置 ===
 func set_current_map(map_id: String) -> void:

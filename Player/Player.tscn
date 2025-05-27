@@ -256,7 +256,7 @@ script = ExtResource("1_q3lat")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 sprite_frames = SubResource("SpriteFrames_u88xs")
-animation = &"walk"
+animation = &"idle"
 
 [node name="WallDetectionArea2D" type="Area2D" parent="AnimatedSprite2D"]
 
