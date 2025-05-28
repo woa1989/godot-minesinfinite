@@ -25,11 +25,7 @@ noise = SubResource("FastNoiseLite_iincs")
 enabled = false
 zoom = Vector2(2, 2)
 
-[node name="Dirt" type="TileMapLayer" parent="World"]
-tile_set = ExtResource("3_iincs")
-script = ExtResource("4_iincs")
-
-[node name="Props" type="TileMapLayer" parent="World"]
+[node name="Map" type="TileMapLayer" parent="World"]
 tile_set = ExtResource("3_iincs")
 script = ExtResource("4_iincs")
 

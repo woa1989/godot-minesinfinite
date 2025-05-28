@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://bnl6x3e06oqwv"]
+
+[ext_resource type="Script" uid="uid://dgl7oaywmbv87" path="res://Global.gd" id="1"]
+
+[node name="Node2D" type="Node2D"]
+script = ExtResource("1")
+terminal_velocity = 750

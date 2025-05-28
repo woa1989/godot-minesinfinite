@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="Mineral_Limits" load_steps=3 format=3 uid="uid://brrpts7deqpt5"]
+
+[ext_resource type="Script" uid="uid://bcxmtyftajhlb" path="res://Minerals/Mineral.gd" id="1"]
+
+[sub_resource type="Curve" id="1"]
+_data = [Vector2(0, 0), 0.0, 0.0, 0, 0, Vector2(0.380623, 0), 0.0, 0.0, 0, 0, Vector2(0.753172, 1), 0.0, 0.0, 0, 0, Vector2(1, 1), 0.0, 0.0, 0, 0]
+point_count = 4
+
+[resource]
+script = ExtResource("1")
+rotate = true
+max_spawn_rate = 0.1
+spawn_limits = SubResource("1")

@@ -16,6 +16,7 @@ extends Node2D
 var loaded_chunks_cache = {} # 已加载区块缓存 {Vector2i: {tile_data}}
 var player_last_mine_position = Vector2.ZERO # 玩家最后在矿洞中的位置
 var has_existing_mine = false # 是否已经有生成的矿洞
+var noise_seed = randi() # 噪声种子，用于地形生成
 
 # 商店物品相关
 enum ShopItem {

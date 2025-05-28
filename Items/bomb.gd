@@ -9,13 +9,16 @@ var explosion_radius: float # 爆炸范围
 var damage: int # 爆炸伤害
 
 # === 引用节点 ===
-var dirt: TileMapLayer # 地形层
-var props: TileMapLayer # 道具层
+var map: TileMapLayer # 地图层
 var world: Node2D # 世界节点
 
 # === 状态标志 ===
 var is_exploding := false # 防止重复爆炸
 var show_debug := false # 调试模式
+
+# === 全局防重复爆炸 ===
+static var exploding_tiles: Dictionary = {} # 正在爆炸的瓦片位置 {Vector2i: float(time)}
+static var explosion_cleanup_timer: float = 0.0 # 清理计时器
 
 # === 初始化 ===
 func _ready() -> void:
@@ -39,12 +42,10 @@ func _load_config() -> void:
 # === 节点初始化 ===
 func _init_nodes() -> void:
 	world = get_parent()
-	dirt = get_node_or_null("/root/Level/World/Dirt")
-	props = get_node_or_null("/root/Level/World/Props")
+	map = get_node_or_null("/root/Level/World/Map")
 	
-	if not dirt:
-		push_error("无法找到Dirt节点，请确认节点路径是否正确")
-	if not props:
+	if not map:
+		push_error("无法找到Map节点，请确认节点路径是否正确")
 		push_error("无法找到Props节点，请确认节点路径是否正确")
 
 # === 物理属性设置 ===
@@ -73,14 +74,14 @@ func explode() -> void:
 		return
 	
 	is_exploding = true
-	if dirt and world:
+	if map and world:
 		_handle_explosion()
 	_play_explosion_effects()
 
 ## 处理爆炸逻辑
 func _handle_explosion() -> void:
 	print("[Bomb] 开始爆炸处理...")
-	var center_tile = dirt.local_to_map(dirt.to_local(global_position))
+	var center_tile = map.local_to_map(map.to_local(global_position))
 	print("[Bomb] 爆炸中心瓦片坐标: ", center_tile)
 	
 	# 定义爆炸范围（转换为瓦片单位）
@@ -100,30 +101,33 @@ func _handle_explosion() -> void:
 func _process_explosion_tile(tile_pos: Vector2i) -> void:
 	print("[Bomb] 检查坐标: ", tile_pos)
 	
-	# 获取两个层的瓦片数据
-	var props_data = _get_tile_data(props, tile_pos)
-	var dirt_data = _get_tile_data(dirt, tile_pos)
+	# 获取单层地图的瓦片数据
+	var tile_data = _get_tile_data(map, tile_pos)
 	
-	# 如果两个层都没有方块，则返回
-	if not props_data and not dirt_data:
+	# 如果没有方块，则返回
+	if not tile_data:
 		return
 	
 	# 优先处理炸药块（可能触发连锁反应）
 	if _handle_explosives(tile_pos):
 		return
 	
-	# 处理普通方块（优先处理道具层）
-	if props_data:
-		_handle_regular_block(tile_pos, props_data, props)
-	elif dirt_data:
-		_handle_regular_block(tile_pos, dirt_data, dirt)
+	# 处理普通方块
+	_handle_regular_block(tile_pos, tile_data, map)
 
 ## 处理爆炸物（炸弹和炸药块）
 func _handle_explosives(tile_pos: Vector2i) -> bool:
+	# 检查这个位置是否已经在爆炸中
+	if exploding_tiles.has(tile_pos):
+		print("[Bomb] 跳过重复爆炸: ", tile_pos)
+		return true
+	
 	var boom_coords = _get_boom_coords()
 	var boom_info = _check_boom_in_layers(tile_pos, boom_coords)
 	
 	if boom_info.found:
+		# 标记这个位置正在爆炸
+		exploding_tiles[tile_pos] = Time.get_unix_time_from_system() + 1.0
 		_trigger_chain_explosion(tile_pos, boom_info.layer)
 		return true
 	return false
@@ -153,16 +157,10 @@ func _get_boom_coords() -> Vector2i:
 func _check_boom_in_layers(tile_pos: Vector2i, boom_coords: Vector2i) -> Dictionary:
 	var result = {"found": false, "layer": null}
 	
-	# 检查props层
-	if _is_boom_in_layer(props, tile_pos, boom_coords):
+	# 检查单层地图
+	if _is_boom_in_layer(map, tile_pos, boom_coords):
 		result.found = true
-		result.layer = props
-		return result
-	
-	# 检查dirt层
-	if _is_boom_in_layer(dirt, tile_pos, boom_coords):
-		result.found = true
-		result.layer = dirt
+		result.layer = map
 		return result
 	
 	return result
@@ -177,6 +175,9 @@ func _trigger_chain_explosion(tile_pos: Vector2i, layer: TileMapLayer) -> void:
 	if tile_data:
 		var chain_radius = tile_data.get_custom_data("value") * config.chain_explosion_multiplier
 		_destroy_block(tile_pos, layer)
+		
+		# 使用延时触发连锁爆炸，避免同时爆炸导致的重复处理
+		await get_tree().create_timer(0.1).timeout
 		
 		# 创建新的爆炸
 		var new_bomb = load("res://Items/Bomb.tscn").instantiate()
@@ -196,7 +197,7 @@ func _destroy_block(tile_pos: Vector2i, layer: TileMapLayer) -> void:
 ## 更新方块血量
 func _update_block_health(tile_pos: Vector2i, tile_data: TileData, health: int, layer: TileMapLayer = null) -> void:
 	if layer == null:
-		layer = dirt
+		layer = map
 		
 	tile_data.set_custom_data("health", health)
 	
@@ -218,12 +219,30 @@ func _play_explosion_effects() -> void:
 
 # === 处理函数 ===
 func _process(delta: float) -> void:
+	# 清理过期的爆炸标记
+	_cleanup_explosion_markers()
+	
+	if is_exploding:
+		return
+		
 	time_left -= delta
 	$CountdownLabel.text = str(ceil(time_left))
 	
 	# 更新闪烁效果
 	if time_left <= 1.0:
 		$ColorRect.color.a = 0.5 + sin(time_left * 10) * 0.5
+
+## 清理过期的爆炸标记
+func _cleanup_explosion_markers() -> void:
+	var current_time = Time.get_unix_time_from_system()
+	var to_remove = []
+	
+	for tile_pos in exploding_tiles:
+		if current_time > exploding_tiles[tile_pos]:
+			to_remove.append(tile_pos)
+	
+	for tile_pos in to_remove:
+		exploding_tiles.erase(tile_pos)
 
 func _exit_tree() -> void:
 	if show_debug:

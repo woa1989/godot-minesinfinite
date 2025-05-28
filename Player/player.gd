@@ -141,6 +141,7 @@ func _physics_process(delta):
 
 	# 挖矿（空中也可挖）
 	if Input.is_action_pressed("dig") and not mining:
+		print("[Player] 挖掘键被按下")
 		var dir = ""
 		var pos = Vector2i.ZERO
 		if Input.is_action_pressed("up"):
@@ -156,6 +157,7 @@ func _physics_process(delta):
 			dir = "left"
 			pos = get_tile_pos(Vector2(-32, 0))
 		if dir != "":
+			print("[Player] 开始挖掘 - 方向:", dir, " 位置:", pos)
 			mining = true
 			mining_dir = dir
 			mining_pos = pos
@@ -164,6 +166,8 @@ func _physics_process(delta):
 				$AudioStreamPlayer2D.play()
 			if has_node("DigParticles2D"):
 				$DigParticles2D.restart()
+		else:
+			print("[Player] 挖掘键按下但没有确定方向")
 
 	velocity = player_velocity
 	move_and_slide()
@@ -182,7 +186,7 @@ func _on_animation_finished():
 
 # 计算目标瓦片格子
 func get_tile_pos(offset: Vector2) -> Vector2i:
-	var tilemap = get_node_or_null("/root/Level/World/Dirt")
+	var tilemap = get_node_or_null("/root/Level/World/Map")
 	if tilemap:
 		var local_pos = tilemap.to_local(global_position + offset)
 		return tilemap.local_to_map(local_pos)
@@ -210,3 +214,8 @@ func throw_bomb():
 	Global.dynamite_remaining -= 1
 	
 	# TODO: 播放投掷动画和音效
+
+# 收集金币
+func collect_gold(value: int):
+	Global.currency += value
+	print("[Player] 收集金币: +", value, " 总计: ", Global.currency)
