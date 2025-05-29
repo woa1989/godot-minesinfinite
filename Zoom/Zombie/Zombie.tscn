@@ -1,0 +1,89 @@
+[gd_scene load_steps=9 format=3 uid="uid://ck13n5tqxyrjw"]
+
+[ext_resource type="Script" uid="uid://dq1c5q7odqgna" path="res://Zoom/Zombie/zombie.gd" id="1_05rl0"]
+[ext_resource type="Texture2D" uid="uid://bbtggokdumg3u" path="res://Zoom/Assets/Zombie 1/zoimbie1_hold.png" id="1_emwmk"]
+[ext_resource type="Texture2D" uid="uid://djkacvnt3rscy" path="res://Zoom/Assets/Zombie 1/zoimbie1_stand.png" id="2_05rl0"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_2doa8"]
+radius = 18.0
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_kkplc"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_emwmk")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_05rl0")
+}],
+"loop": true,
+"name": &"Walk",
+"speed": 5.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_nuknj"]
+size = Vector2(12, 30)
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_05rl0"]
+particle_flag_disable_z = true
+direction = Vector3(1, -1, 0)
+initial_velocity_min = 100.0
+initial_velocity_max = 200.0
+gravity = Vector3(0, 300, 0)
+attractor_interaction_enabled = false
+scale_min = 2.0
+scale_max = 20.0
+color = Color(0, 0.305882, 0.152941, 1)
+hue_variation_min = -0.2
+hue_variation_max = 0.2
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_emwmk"]
+radius = 470.0
+
+[node name="Zombie" type="CharacterBody2D" groups=["zombie"]]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("1_05rl0")
+
+[node name="NavigationAgent2D" type="NavigationAgent2D" parent="."]
+path_desired_distance = 4.0
+target_desired_distance = 4.0
+path_max_distance = 50.0
+avoidance_enabled = true
+radius = 15.0
+neighbor_distance = 100.0
+max_speed = 150.0
+debug_enabled = true
+
+[node name="Shape" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_2doa8")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Shape"]
+scale = Vector2(2, 2)
+sprite_frames = SubResource("SpriteFrames_kkplc")
+animation = &"Walk"
+autoplay = "Walk"
+
+[node name="Hit_Box" type="Area2D" parent="Shape"]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Shape/Hit_Box"]
+position = Vector2(25, -1)
+shape = SubResource("RectangleShape2D_nuknj")
+one_way_collision_margin = 50.0
+
+[node name="GPUParticles2D" type="GPUParticles2D" parent="Shape"]
+position = Vector2(25, 0)
+emitting = false
+amount = 32
+lifetime = 0.8
+one_shot = true
+process_material = SubResource("ParticleProcessMaterial_05rl0")
+
+[node name="HitTimer" type="Timer" parent="."]
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+
+[node name="DetectArea" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="DetectArea"]
+shape = SubResource("CircleShape2D_emwmk")

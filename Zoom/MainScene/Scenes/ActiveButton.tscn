@@ -1,0 +1,30 @@
+[gd_scene load_steps=4 format=3 uid="uid://csur5wclkytpp"]
+
+[ext_resource type="FontFile" uid="uid://dp3k78u043ioq" path="res://Zoom/MainScene/Font/VonwaonBitmap-16px.ttf" id="1_q8kvw"]
+[ext_resource type="Script" uid="uid://2sllpk5ii4i1" path="res://Zoom/MainScene/Scenes/active_button.gd" id="2_axgid"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8hrnv"]
+bg_color = Color(0.137255, 0.137255, 0.137255, 0.921569)
+
+[node name="ActiveButton" type="Button"]
+custom_minimum_size = Vector2(200, 60)
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -100.0
+offset_top = -30.0
+offset_right = 100.0
+offset_bottom = 30.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_fonts/font = ExtResource("1_q8kvw")
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_8hrnv")
+button_mask = 3
+text = "Button"
+expand_icon = true
+script = ExtResource("2_axgid")
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]

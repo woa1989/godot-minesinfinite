@@ -1,6 +1,14 @@
-[gd_scene load_steps=2 format=3 uid="uid://omnxpq6vdhxp"]
+[gd_scene load_steps=8 format=3 uid="uid://omnxpq6vdhxp"]
 
 [ext_resource type="Texture2D" uid="uid://6dmhac2y4xo6" path="res://Zoom/Assets/level.jpg" id="1_t1ill"]
+[ext_resource type="Texture2D" uid="uid://b0kk75c6suquo" path="res://Zoom/MainScene/Assets/fog2.png" id="2_l0ygp"]
+[ext_resource type="PackedScene" uid="uid://csur5wclkytpp" path="res://Zoom/MainScene/Scenes/ActiveButton.tscn" id="3_1uncm"]
+[ext_resource type="Script" uid="uid://c1f0cwtdp0jc2" path="res://Zoom/MainScene/meun_box.gd" id="3_mj21k"]
+[ext_resource type="Texture2D" uid="uid://fbfqervlob2y" path="res://Zoom/Assets/sq.png" id="5_odg0y"]
+[ext_resource type="AudioStream" uid="uid://bh58e6k1r2ok2" path="res://Zoom/Audios/cruising-down-8bit-lane-159615.mp3" id="6_xgggr"]
+
+[sub_resource type="Gradient" id="Gradient_1uncm"]
+colors = PackedColorArray(0.964706, 0.807843, 0.576471, 1, 1, 1, 1, 1)
 
 [node name="MainScene" type="Control"]
 layout_mode = 3
@@ -24,11 +32,80 @@ expand_mode = 1
 [node name="Label" type="Label" parent="."]
 modulate = Color(0.611765, 0.611765, 0.611765, 1)
 layout_mode = 0
-offset_left = 298.0
-offset_top = 425.0
-offset_right = 744.0
-offset_bottom = 562.0
+offset_left = 250.0
+offset_top = 229.0
+offset_right = 696.0
+offset_bottom = 366.0
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 10
 theme_override_font_sizes/font_size = 100
 text = "Zoon Zed"
+
+[node name="CPUParticles2D" type="CPUParticles2D" parent="."]
+position = Vector2(-150, 62)
+amount = 12
+texture = ExtResource("2_l0ygp")
+lifetime = 12.0
+preprocess = 100.0
+explosiveness = 0.15
+fixed_fps = 60
+emission_shape = 1
+emission_sphere_radius = 120.0
+gravity = Vector2(100, 20)
+initial_velocity_min = 15.0
+initial_velocity_max = 40.0
+angular_velocity_min = -30.0
+angular_velocity_max = 30.0
+linear_accel_min = -40.0
+damping_min = 5.579
+damping_max = 14.591
+angle_min = -146.0
+angle_max = 142.1
+scale_amount_min = 8.0
+scale_amount_max = 13.0
+color = Color(1, 1, 1, 0.478431)
+color_ramp = SubResource("Gradient_1uncm")
+
+[node name="MeunBox" type="VBoxContainer" parent="."]
+custom_minimum_size = Vector2(300, 500)
+layout_mode = 0
+offset_left = 1200.0
+offset_top = 313.0
+offset_right = 1500.0
+offset_bottom = 813.0
+alignment = 1
+script = ExtResource("3_mj21k")
+
+[node name="Play" parent="MeunBox" instance=ExtResource("3_1uncm")]
+layout_mode = 2
+text = "Play"
+
+[node name="Exit" parent="MeunBox" instance=ExtResource("3_1uncm")]
+layout_mode = 2
+text = "Exit"
+
+[node name="TextureRect" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = 190.0
+offset_top = 385.0
+offset_right = 924.0
+offset_bottom = 824.0
+texture = ExtResource("5_odg0y")
+expand_mode = 1
+
+[node name="Label" type="Label" parent="TextureRect"]
+layout_mode = 0
+offset_left = 198.0
+offset_top = 162.0
+offset_right = 517.0
+offset_bottom = 249.0
+theme_override_font_sizes/font_size = 30
+text = "REMEMBER:
+You Only have 3 shots"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("6_xgggr")
+volume_db = -10.0
+autoplay = true

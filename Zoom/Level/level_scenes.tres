@@ -1,0 +1,35 @@
+[gd_resource type="TileSet" load_steps=5 format=3 uid="uid://ccdfb0rwvu3tu"]
+
+[ext_resource type="Texture2D" uid="uid://vpgudaulx5pd" path="res://Zoom/Assets/tilesheet_complete_2X.png" id="1_wt8yt"]
+[ext_resource type="PackedScene" uid="uid://ck13n5tqxyrjw" path="res://Zoom/Zombie/Zombie.tscn" id="2_4u5jx"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_p18go"]
+texture = ExtResource("1_wt8yt")
+texture_region_size = Vector2i(128, 128)
+14:1/0 = 0
+14:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+15:1/0 = 0
+15:1/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+15:2/0 = 0
+15:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+14:2/0 = 0
+14:2/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+20:4/0 = 0
+20:4/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -26.95, 68.75, -23.65, 64, 25.3, -59.4, 21.45)
+9:16/0 = 0
+8:16/0 = 0
+8:16/0/physics_layer_0/polygon_0/points = PackedVector2Array(-64, -64, 64, -64, 64, 64, -64, 64)
+8:17/0 = 0
+8:17/0/physics_layer_0/polygon_0/points = PackedVector2Array(-22.55, -64, 23.65, -64, 25.3, 64, -22, 64)
+9:17/0 = 0
+
+[sub_resource type="TileSetScenesCollectionSource" id="TileSetScenesCollectionSource_7ka2j"]
+resource_name = "zombie"
+scenes/1/scene = ExtResource("2_4u5jx")
+
+[resource]
+tile_size = Vector2i(128, 128)
+physics_layer_0/collision_layer = 3
+navigation_layer_0/layers = 3
+sources/0 = SubResource("TileSetAtlasSource_p18go")
+sources/1 = SubResource("TileSetScenesCollectionSource_7ka2j")

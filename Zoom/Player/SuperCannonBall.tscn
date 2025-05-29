@@ -1,0 +1,29 @@
+[gd_scene load_steps=3 format=3 uid="uid://stax0xhnuyjt"]
+
+[ext_resource type="Script" uid="uid://bw2mmc7fxbovf" path="res://Zoom/Player/super_cannon_ball.gd" id="1_hnprx"]
+[ext_resource type="Texture2D" uid="uid://fbfqervlob2y" path="res://Zoom/Assets/sq.png" id="2_7m7oe"]
+
+[node name="SuperCannonBall" type="Node2D"]
+script = ExtResource("1_hnprx")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="warningShap" type="Sprite2D" parent="."]
+position = Vector2(0, 1)
+scale = Vector2(0.02, 0.05)
+texture = ExtResource("2_7m7oe")
+offset = Vector2(64, 0)
+
+[node name="TimerLabel" type="Label" parent="."]
+offset_left = 48.0
+offset_top = -20.0
+offset_right = 88.0
+offset_bottom = 22.0
+theme_override_colors/font_outline_color = Color(0, 0.211765, 0.309804, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 30
+text = "3"
+
+[node name="LaunthTimer" type="Timer" parent="."]
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
