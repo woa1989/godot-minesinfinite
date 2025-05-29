@@ -1,23 +1,8 @@
 extends Control
 
-@onready var AmmoLabel: Label = $Label
-var KillLabel: Label
-var StatusLabel: Label
-
-func _ready() -> void:
-	# 创建击杀标签
-	KillLabel = Label.new()
-	add_child(KillLabel)
-	KillLabel.position = Vector2(10, 40)
-	KillLabel.name = "KillLabel"
-	KillLabel.add_theme_font_size_override("font_size", 16)
-		
-	# 创建状态标签
-	StatusLabel = Label.new()
-	add_child(StatusLabel)
-	StatusLabel.position = Vector2(10, 70)
-	StatusLabel.name = "StatusLabel"
-	StatusLabel.add_theme_font_size_override("font_size", 16)
+@onready var AmmoLabel: Label = $ItemList/Label
+@onready var KillLabel: Label = $ItemList/Label2
+@onready var StatusLabel: Label = $ItemList/Label3
 
 func _process(_delta: float) -> void:
 	if AmmoLabel:

@@ -1,15 +1,18 @@
-[gd_scene load_steps=9 format=4 uid="uid://c763orinmx6r1"]
+[gd_scene load_steps=10 format=4 uid="uid://c763orinmx6r1"]
 
 [ext_resource type="TileSet" uid="uid://bxlrqojk78qd3" path="res://Zoom/Level/level1.tres" id="1_3axri"]
 [ext_resource type="Script" uid="uid://uyr3vq7idl2n" path="res://Zoom/Level/camera_2d.gd" id="1_4jrw8"]
 [ext_resource type="PackedScene" uid="uid://bc2ldwmjc77jo" path="res://Zoom/Player/Player.tscn" id="1_gikyv"]
+[ext_resource type="Script" path="res://Zoom/Level/level_manager.gd" id="1_level_manager"]
 [ext_resource type="TileSet" uid="uid://d3wfbgky15d5e" path="res://Zoom/Level/level_wall.tres" id="2_k5wsw"]
 [ext_resource type="PackedScene" uid="uid://ck13n5tqxyrjw" path="res://Zoom/Zombie/Zombie.tscn" id="2_ot4sy"]
 [ext_resource type="AudioStream" uid="uid://bh58e6k1r2ok2" path="res://Zoom/Audios/cruising-down-8bit-lane-159615.mp3" id="3_0snyu"]
 [ext_resource type="TileSet" uid="uid://ccdfb0rwvu3tu" path="res://Zoom/Level/level_scenes.tres" id="3_cga0r"]
 [ext_resource type="Script" uid="uid://2ye1ncmroyko" path="res://Zoom/Level/ui.gd" id="4_0snyu"]
+[ext_resource type="PackedScene" uid="uid://csur5wclkytpp" path="res://Zoom/MainScene/Scenes/ActiveButton.tscn" id="9_k5wsw"]
 
 [node name="Level1" type="Node2D"]
+script = ExtResource("1_level_manager")
 
 [node name="Floor" type="TileMapLayer" parent="."]
 use_parent_material = true
@@ -60,13 +63,46 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 script = ExtResource("4_0snyu")
 
-[node name="Label" type="Label" parent="CanvasLayer/UI"]
+[node name="ItemList" type="VBoxContainer" parent="CanvasLayer/UI"]
+custom_minimum_size = Vector2(500, 200)
 layout_mode = 0
-offset_left = 74.0
-offset_top = 49.0
-offset_right = 357.0
-offset_bottom = 151.0
+offset_left = 20.0
+offset_top = 30.0
+offset_right = 566.0
+offset_bottom = 245.0
+
+[node name="Label" type="Label" parent="CanvasLayer/UI/ItemList"]
+layout_mode = 2
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 10
 theme_override_font_sizes/font_size = 50
 text = "AMMO :  "
+
+[node name="Label2" type="Label" parent="CanvasLayer/UI/ItemList"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 50
+text = "AMMO :  "
+
+[node name="Label3" type="Label" parent="CanvasLayer/UI/ItemList"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 50
+text = "AMMO :  "
+
+[node name="Stop" parent="CanvasLayer/UI" instance=ExtResource("9_k5wsw")]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -227.0
+offset_top = 53.0
+offset_right = -27.0
+offset_bottom = 113.0
+grow_horizontal = 0
+grow_vertical = 1
+text = "STOP"

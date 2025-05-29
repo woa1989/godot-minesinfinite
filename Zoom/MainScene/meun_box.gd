@@ -8,8 +8,7 @@ func _ready() -> void:
 	ExitBut.pressed.connect(_on_ExitBut_Pressed)
 	
 func _on_PlayBut_Pressed():
-	print("s")
-	#get_tree().change_scene_to_packed()
+	get_tree().change_scene_to_packed(preload("res://Zoom/Level/Level_1.tscn"))
 
 func _on_ExitBut_Pressed():
 	get_tree().quit()
