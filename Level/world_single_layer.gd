@@ -60,9 +60,9 @@ func _configure_noise() -> void:
 	if not Global.has_existing_mine:
 		# 仅在第一次生成地图时设置新的随机种子
 		Global.noise_seed = randi()
-		print("[World] 为新地图生成噪声种子:", Global.noise_seed)
 	else:
-		print("[World] 使用已存在的噪声种子:", Global.noise_seed)
+		pass
+
 	
 	# 配置噪声参数
 	noise.noise_type = FastNoiseLite.TYPE_PERLIN
@@ -77,7 +77,7 @@ func _configure_noise() -> void:
 func set_current_map(map_id: String) -> void:
 	current_map_id = map_id
 	Global.current_map_id = map_id
-	print("[World] 设置当前地图为: ", map_id)
+
 	_load_map_config(map_id)
 
 func _init_map_loading() -> void:
@@ -106,7 +106,7 @@ func _load_map_config(map_id: String) -> void:
 # === TileSet配置 ===
 func _configure_tileset(map_data: Dictionary) -> void:
 	atlas_map = map_data.atlas_map.duplicate()
-	print("[World] 设置atlas_map: ", atlas_map)
+
 	
 	var new_tileset = map_data.tilemap.duplicate(true)
 	if new_tileset:
@@ -115,15 +115,19 @@ func _configure_tileset(map_data: Dictionary) -> void:
 		push_error("[World] 无法克隆tileset!")
 
 func _setup_tilesets(new_tileset) -> void:
-	print("[World] 开始设置tileset...")
+	if OS.is_debug_build() and Global.get("debug_tileset_setup"):
+		pass
+
 	map.tile_set = new_tileset
-	print("[World] tileset已设置到map")
+	if OS.is_debug_build() and Global.get("debug_tileset_setup"):
+		pass
 	
 	# 简化初始化流程，直接初始化自定义数据层
 	_init_custom_data_layers()
 	
 	if _validate_tilesets():
-		print("[World] tileset初始化和验证成功")
+		if OS.is_debug_build() and Global.get("debug_tileset_setup"):
+			pass
 	else:
 		push_error("[World] TileSet验证失败，但继续运行")
 
@@ -139,22 +143,22 @@ func get_custom_data_layers() -> Dictionary:
 		var health_id = _layers["health_id"]
 		var value_id = _layers["value_id"]
 		if tileset.get_custom_data_layers_count() > max(health_id, value_id):
-			print("[World] 使用缓存的数据层: ", _layers)
+
 			return _layers
 		else:
-			print("[World] 缓存的数据层无效，重新获取...")
+
 			_layers = {}
 		
-	print("[World] 尝试重新获取自定义数据层...")
+
 	
 	# 直接尝试获取数据层，不依赖验证
 	var layers = {}
 	var layer_count = map.tile_set.get_custom_data_layers_count()
-	print("[World] TileSet自定义数据层数量: ", layer_count)
+
 	
 	for i in range(layer_count):
 		var layer_name = map.tile_set.get_custom_data_layer_name(i)
-		print("[World] 数据层 ", i, ": ", layer_name)
+
 		if layer_name == "health":
 			layers["health_id"] = i
 		elif layer_name == "value":
@@ -162,11 +166,11 @@ func get_custom_data_layers() -> Dictionary:
 	
 	if layers.has("health_id") and layers.has("value_id"):
 		_layers = layers
-		print("[World] 成功获取数据层: ", layers)
+
 		return layers
 	else:
-		print("[World] 数据层数量: ", map.tile_set.get_custom_data_layers_count())
-		print("[World] 数据层不完整，尝试重新初始化: ", layers)
+
+
 		
 		# 如果数据层不完整，尝试重新初始化
 		_init_custom_data_layers()
@@ -182,10 +186,10 @@ func get_custom_data_layers() -> Dictionary:
 		
 		if layers.has("health_id") and layers.has("value_id"):
 			_layers = layers
-			print("[World] 重新初始化后成功获取数据层: ", layers)
+
 			return layers
 	
-	print("[World] 最终获取数据层失败")
+
 	return {}
 
 # === 验证函数 ===
@@ -199,7 +203,7 @@ func _validate_tilesets() -> bool:
 		push_error("[World] tileset没有任何源!")
 		return false
 		
-	print("[World] tileset加载成功，map源数量: ", map_source_count)
+
 	return true
 
 # === 自定义数据层初始化 ===
@@ -213,7 +217,7 @@ func _init_custom_data_layers() -> void:
 			push_error("[World] 初始化tileset数据层第二次尝试也失败!")
 			return
 			
-	print("[World] 成功初始化tileset和数据层")
+
 
 # === 区块生成与管理 ===
 func generate_chunk(chunk_pos: Vector2i) -> void:
@@ -231,6 +235,9 @@ func _try_load_from_cache(chunk_pos: Vector2i) -> bool:
 		if source_id != -1:
 			var chunk_data = Global.loaded_chunks_cache[chunk_pos]
 			_load_chunk_data(chunk_pos, source_id, chunk_data)
+			# 重要：标记区块为已加载，防止重复生成
+			loaded_chunks[chunk_pos] = true
+
 			return true
 	return false
 
@@ -258,8 +265,7 @@ func _generate_new_chunk(chunk_pos: Vector2i) -> void:
 		return
 		
 	var chunk_data = {}
-	var cave_count = 0 # 统计洞穴数量
-	var total_positions = 0 # 统计总位置数
+	
 	
 	# 生成区块内的每个瓦片
 	for x in range(CHUNK_SIZE):
@@ -275,11 +281,8 @@ func _generate_new_chunk(chunk_pos: Vector2i) -> void:
 			else:
 				# 统计地下部分
 				if world_y > 0:
-					total_positions += 1
 					var should_generate = _should_generate_block(world_y, pos)
-					if not should_generate:
-						cave_count += 1
-					else:
+					if should_generate:
 						_generate_underground_tile(pos, world_y)
 						var tile_type = _get_tile_type_at(pos, world_y)
 						if tile_type != EMPTY:
@@ -287,13 +290,6 @@ func _generate_new_chunk(chunk_pos: Vector2i) -> void:
 							var value = _get_tile_value(tile_type)
 							_save_tile_to_cache(chunk_data, pos, tile_type, health, value)
 	
-	# 输出洞穴生成统计（仅对地下区块，且为调试模式时）
-	if total_positions > 0 and chunk_pos.y > 0 and OS.is_debug_build():
-		var cave_percentage = float(cave_count) / float(total_positions) * 100.0
-		print("[Cave Debug] 区块 %s: 洞穴率 %.1f%% (%d/%d), 深度范围: %d-%d" % [
-			chunk_pos, cave_percentage, cave_count, total_positions,
-			chunk_pos.y * CHUNK_SIZE, (chunk_pos.y + 1) * CHUNK_SIZE - 1
-		])
 	
 	# 缓存生成的区块数据
 	if not chunk_data.is_empty():
@@ -334,7 +330,7 @@ func _create_block(pos: Vector2i, source_id: int, world_y: int) -> void:
 	
 	# 炸弹生成调试信息
 	if block_type == BOOM:
-		print("[World] 成功创建炸弹在位置: ", pos, " 深度: ", world_y, " 使用图块: ", atlas_map[BOOM])
+		pass
 	
 	map.set_cell(pos, source_id, atlas_map[block_type])
 	var tile_data = map.get_cell_tile_data(pos)
@@ -357,12 +353,12 @@ func _determine_block_type(world_y: int, _pos: Vector2i) -> int:
 
 	# 特殊深度增加炸弹几率
 	if world_y > 0 and world_y % 8 == 0 and rand_val < 0.4:
-		print("[World] 在特殊深度 ", world_y, " 生成炸弹")
+
 		return BOOM
 
 	# 较高炸弹生成概率，较低宝箱概率
 	if rand_val < 0.20 + depth_factor * 0.15: # 炸弹 - 较高概率20%~35%
-		print("[World] 生成炸弹在深度 ", world_y)
+
 		return BOOM
 	elif rand_val < 0.22 + depth_factor * 0.03: # 高级宝箱（稀有）2%~5%
 		return CHEST3
@@ -470,7 +466,7 @@ func _unload_chunk(chunk_pos: Vector2i) -> void:
 
 # === 缓存管理 ===
 func _load_cached_chunks() -> void:
-	print("[World] 正在加载缓存的区块数据...")
+
 	var source_id = _get_valid_source_id()
 	if source_id == -1:
 		push_error("[World] 无法找到有效的tileset源！缓存加载失败")
@@ -484,6 +480,10 @@ func _load_cached_chunks() -> void:
 	for chunk_pos in Global.loaded_chunks_cache:
 		var chunk_data = Global.loaded_chunks_cache[chunk_pos]
 		_load_chunk_data(chunk_pos, source_id, chunk_data)
+		# 重要：标记区块为已加载，防止重复生成
+		loaded_chunks[chunk_pos] = true
+		if OS.is_debug_build() and Global.get("debug_chunk_loading"):
+			pass
 
 # === 工具函数 ===
 func world_to_chunk(world_pos: Vector2) -> Vector2i:

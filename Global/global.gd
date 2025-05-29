@@ -43,12 +43,40 @@ var chests_collected = [0, 0, 0] # 对应三种宝箱的收集数量
 
 var current_map_id = "mine" # 当前地图ID
 
+# 调试输出控制标志
+var debug_cache_verbose = false # 缓存操作详细输出
+var debug_gold_generation = false # 金币生成输出
+var debug_explosions = false # 爆炸相关输出
+var debug_player_actions = false # 玩家动作输出
+var debug_cave_generation = false # 洞穴生成统计输出
+var debug_chunk_loading = false # 区块加载输出
+var debug_tileset_setup = false # TileSet设置输出
+var test_verbose_output = false # 持久化测试详细输出
+var enable_persistence_test = false # 是否启用持久化测试
+
 # 清理矿洞缓存，强制重新生成
 func clear_mine_cache():
 	loaded_chunks_cache.clear()
 	has_existing_mine = false
 	noise_seed = randi()
-	print("[Global] 已清理矿洞缓存，将重新生成地形")
+
+
+# 启用/禁用调试输出
+func set_debug_output(enable: bool):
+	debug_cache_verbose = enable
+	debug_gold_generation = enable
+	debug_explosions = enable
+	debug_player_actions = enable
+	debug_cave_generation = enable
+	debug_chunk_loading = enable
+	debug_tileset_setup = enable
+	test_verbose_output = enable
+
+
+# 启用/禁用持久化测试
+func set_persistence_test(enable: bool):
+	enable_persistence_test = enable
+
 
 func buy_item(item: ShopItem) -> bool:
 	if currency >= shop_prices[item]:

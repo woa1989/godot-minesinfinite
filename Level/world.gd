@@ -68,7 +68,7 @@ func _configure_noise() -> void:
 func set_current_map(map_id: String) -> void:
 	current_map_id = map_id
 	Global.current_map_id = map_id
-	print("[World] 设置当前地图为: ", map_id)
+
 	await _load_map_config(map_id)
 
 func _init_map_loading() -> void:
@@ -97,7 +97,7 @@ func _load_map_config(map_id: String) -> void:
 # === TileSet配置 ===
 func _configure_tileset(map_data: Dictionary) -> void:
 	atlas_map = map_data.atlas_map.duplicate()
-	print("[World] 设置atlas_map: ", atlas_map)
+
 	
 	var new_tileset = map_data.tilemap.duplicate(true)
 	if new_tileset:
@@ -114,7 +114,7 @@ func _setup_tilesets(new_tileset) -> void:
 	
 	if _validate_tilesets():
 		_init_custom_data_layers()
-		print("[World] Tileset完全初始化完成")
+
 	else:
 		push_error("[World] Tileset验证失败!")
 
@@ -125,10 +125,10 @@ func get_custom_data_layers() -> Dictionary:
 		return {}
 		
 	if _layers and _layers.has("health_id") and _layers.has("value_id"):
-		print("[World] 使用缓存的数据层: ", _layers)
+
 		return _layers
 		
-	print("[World] 尝试重新获取自定义数据层...")
+
 	
 	# 直接尝试获取数据层，不依赖验证
 	var layers = {}
@@ -141,11 +141,11 @@ func get_custom_data_layers() -> Dictionary:
 	
 	if layers.has("health_id") and layers.has("value_id"):
 		_layers = layers
-		print("[World] 成功获取数据层: ", layers)
+
 		return layers
 	else:
-		print("[World] 数据层数量: ", map.tile_set.get_custom_data_layers_count())
-		print("[World] 数据层不完整，尝试重新初始化: ", layers)
+
+
 		# 如果数据层不完整，尝试重新初始化
 		_init_custom_data_layers()
 		
@@ -160,10 +160,10 @@ func get_custom_data_layers() -> Dictionary:
 		
 		if layers.has("health_id") and layers.has("value_id"):
 			_layers = layers
-			print("[World] 重新初始化后成功获取数据层: ", layers)
+
 			return layers
 	
-	print("[World] 最终获取数据层失败")
+
 	return {}
 
 # === 验证函数 ===
@@ -177,7 +177,7 @@ func _validate_tilesets() -> bool:
 		push_error("[World] tileset没有任何源!")
 		return false
 		
-	print("[World] tileset加载成功，map源数量: ", map_source_count)
+
 	return true
 
 # === 自定义数据层初始化 ===
@@ -191,7 +191,7 @@ func _init_custom_data_layers() -> void:
 			push_error("[World] 初始化tileset数据层第二次尝试也失败!")
 			return
 			
-	print("[World] 成功初始化tileset和数据层")
+
 
 # === 区块生成与管理 ===
 func generate_chunk(chunk_pos: Vector2i) -> void:
@@ -440,7 +440,7 @@ func _unload_chunk(chunk_pos: Vector2i) -> void:
 
 # === 缓存管理 ===
 func _load_cached_chunks() -> void:
-	print("[World] 正在加载缓存的区块数据...")
+
 	var source_id = _get_valid_source_id()
 	if source_id == -1:
 		push_error("[World] 无法找到有效的tileset源！缓存加载失败")

@@ -7,7 +7,7 @@ static func init_custom_data(tileset: TileSet) -> Dictionary:
 		push_error("[TileSetDataHelper] Tileset为空!")
 		return {}
 	
-	print("[TileSetDataHelper] 开始初始化自定义数据层...")
+
 	
 	# 获取或创建自定义数据层
 	var health_layer_id = -1
@@ -27,7 +27,7 @@ static func init_custom_data(tileset: TileSet) -> Dictionary:
 		tileset.add_custom_data_layer()
 		tileset.set_custom_data_layer_name(health_layer_id, "health")
 		tileset.set_custom_data_layer_type(health_layer_id, TYPE_INT)
-		print("[TileSetDataHelper] 已创建health层，ID: ", health_layer_id)
+
 	else:
 		print("[TileSetDataHelper] 找到现有的health层，ID: ", health_layer_id)
 	

@@ -25,7 +25,6 @@ var mining_dir: String = "" # 挖掘方向
 var mining_pos: Vector2i = Vector2i.ZERO # 挖掘目标格子
 
 func _ready():
-	print("[Player] 初始化 - 位置:", position, " 碰撞层:", collision_layer)
 	GRAVITY = ProjectSettings.get_setting("physics/2d/default_gravity")
 
 	# 挖掘动画设为非循环
@@ -142,7 +141,6 @@ func _physics_process(delta):
 
 	# 挖矿（空中也可挖）
 	if Input.is_action_pressed("dig") and not mining:
-		print("[Player] 挖掘键被按下")
 		var dir = ""
 		var pos = Vector2i.ZERO
 		if Input.is_action_pressed("up"):
@@ -158,7 +156,6 @@ func _physics_process(delta):
 			dir = "left"
 			pos = get_tile_pos(Vector2(-32, 0))
 		if dir != "":
-			print("[Player] 开始挖掘 - 方向:", dir, " 位置:", pos)
 			mining = true
 			mining_dir = dir
 			mining_pos = pos
@@ -167,8 +164,6 @@ func _physics_process(delta):
 				$AudioStreamPlayer2D.play()
 			if has_node("DigParticles2D"):
 				$DigParticles2D.restart()
-		else:
-			print("[Player] 挖掘键按下但没有确定方向")
 
 	velocity = player_velocity
 	move_and_slide()
@@ -219,9 +214,7 @@ func throw_bomb():
 	# 减少炸弹数量
 	Global.dynamite_remaining -= 1
 	
-	print("[Player] 投掷炸弹 - 方向:", direction, " 位置:", bomb.global_position) # 添加调试信息
 
 # 收集金币
 func collect_gold(value: int):
 	Global.currency += value
-	print("[Player] 收集金币: +", value, " 总计: ", Global.currency)

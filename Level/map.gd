@@ -123,7 +123,8 @@ func process_tile_damage(tile_pos: Vector2i, _layer: TileMapLayer, tile_data: Ti
 			if is_boom:
 				# 检查是否已经在爆炸中，防止重复触发
 				if exploding_tiles.has(tile_pos):
-					print("[Map] 跳过重复爆炸: ", tile_pos)
+					if OS.is_debug_build() and Global.get("debug_explosions"):
+						print("[Map] 跳过重复爆炸: ", tile_pos)
 					return true
 				
 				# 标记为正在爆炸
@@ -133,6 +134,10 @@ func process_tile_damage(tile_pos: Vector2i, _layer: TileMapLayer, tile_data: Ti
 				erase_cell(tile_pos)
 				health_manager.remove_health_bar(tile_pos)
 				tile_max_health.erase(tile_pos)
+				
+				# 同步更新缓存 - 移除爆炸的瓦片
+				_remove_tile_from_cache(tile_pos)
+				
 				# 触发爆炸效果
 				var explosion_radius = value
 				trigger_explosion(tile_pos, explosion_radius)
@@ -149,6 +154,9 @@ func process_tile_damage(tile_pos: Vector2i, _layer: TileMapLayer, tile_data: Ti
 				health_manager.remove_health_bar(tile_pos)
 				tile_max_health.erase(tile_pos)
 				
+				# 同步更新缓存 - 移除转换的宝箱
+				_remove_tile_from_cache(tile_pos)
+				
 				# 生成gold物品
 				_spawn_gold(tile_pos, value)
 				return true
@@ -163,6 +171,9 @@ func process_tile_damage(tile_pos: Vector2i, _layer: TileMapLayer, tile_data: Ti
 			erase_cell(tile_pos)
 			health_manager.remove_health_bar(tile_pos)
 			tile_max_health.erase(tile_pos)
+			
+			# 同步更新缓存 - 移除被挖掘的瓦片
+			_remove_tile_from_cache(tile_pos)
 			
 			if is_chest:
 				Global.currency += value
@@ -187,4 +198,34 @@ func _spawn_gold(tile_pos: Vector2i, value: int):
 	
 	# 将金币添加到世界节点，这样金币会受到相同的变换
 	get_parent().add_child(gold_instance)
-	print("[Map] 在位置 ", tile_pos, " 生成了价值 ", value, " 的金币，坐标:", local_pos)
+	
+	# 只在调试模式下输出金币生成信息
+	if OS.is_debug_build() and Global.get("debug_gold_generation"):
+		print("[Map] 在位置 ", tile_pos, " 生成了价值 ", value, " 的金币，坐标:", local_pos)
+
+# === 缓存管理功能 ===
+# 从缓存中移除被挖掘的瓦片
+func _remove_tile_from_cache(tile_pos: Vector2i) -> void:
+	# 计算瓦片所属的区块
+	var chunk_pos = Vector2i(
+		floor(tile_pos.x / 16.0), # CHUNK_SIZE = 16
+		floor(tile_pos.y / 16.0)
+	)
+	
+	# 只在调试模式下输出详细信息
+	if OS.is_debug_build() and Global.get("debug_cache_verbose"):
+		print("[Map] 尝试从缓存移除瓦片: ", tile_pos, " -> 区块: ", chunk_pos)
+	
+	# 检查区块是否在缓存中
+	if Global.loaded_chunks_cache.has(chunk_pos):
+		var chunk_data = Global.loaded_chunks_cache[chunk_pos]
+		
+		# 从区块数据中移除这个瓦片
+		if chunk_data.has(tile_pos):
+			chunk_data.erase(tile_pos)
+			if OS.is_debug_build() and Global.get("debug_cache_verbose"):
+				print("[Map] ✓ 成功从缓存中移除瓦片: ", tile_pos, " 区块: ", chunk_pos)
+		elif OS.is_debug_build() and Global.get("debug_cache_verbose"):
+			print("[Map] ⚠️ 瓦片不在区块缓存中: ", tile_pos)
+	elif OS.is_debug_build() and Global.get("debug_cache_verbose"):
+		print("[Map] ⚠️ 区块不在全局缓存中: ", chunk_pos)
