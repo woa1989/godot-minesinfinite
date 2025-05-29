@@ -1,9 +1,9 @@
-[gd_scene load_steps=10 format=4 uid="uid://c763orinmx6r1"]
+[gd_scene load_steps=11 format=4 uid="uid://c763orinmx6r1"]
 
 [ext_resource type="TileSet" uid="uid://bxlrqojk78qd3" path="res://Zoom/Level/level1.tres" id="1_3axri"]
 [ext_resource type="Script" uid="uid://uyr3vq7idl2n" path="res://Zoom/Level/camera_2d.gd" id="1_4jrw8"]
 [ext_resource type="PackedScene" uid="uid://bc2ldwmjc77jo" path="res://Zoom/Player/Player.tscn" id="1_gikyv"]
-[ext_resource type="Script" path="res://Zoom/Level/level_manager.gd" id="1_level_manager"]
+[ext_resource type="Script" uid="uid://cskxccsc4vigk" path="res://Zoom/Level/level_manager.gd" id="1_level_manager"]
 [ext_resource type="TileSet" uid="uid://d3wfbgky15d5e" path="res://Zoom/Level/level_wall.tres" id="2_k5wsw"]
 [ext_resource type="PackedScene" uid="uid://ck13n5tqxyrjw" path="res://Zoom/Zombie/Zombie.tscn" id="2_ot4sy"]
 [ext_resource type="AudioStream" uid="uid://bh58e6k1r2ok2" path="res://Zoom/Audios/cruising-down-8bit-lane-159615.mp3" id="3_0snyu"]
