@@ -1,6 +1,7 @@
-[gd_scene load_steps=13 format=3 uid="uid://j2daocoy7rlo"]
+[gd_scene load_steps=14 format=3 uid="uid://j2daocoy7rlo"]
 
 [ext_resource type="Texture2D" uid="uid://c4b4g1pit567e" path="res://Zoom/Assets/fx/f3_fx_entropicdecay.png" id="1_ykr8y"]
+[ext_resource type="Script" uid="uid://bkrouvk6gd2e5" path="res://Zoom/Player/fire_ball.gd" id="2_fire_ball"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_gycmk"]
 atlas = ExtResource("1_ykr8y")
@@ -77,6 +78,9 @@ animations = [{
 radius = 35.0143
 
 [node name="FireBall" type="Area2D"]
+collision_layer = 8
+collision_mask = 4
+script = ExtResource("2_fire_ball")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
 sprite_frames = SubResource("SpriteFrames_bf4uh")

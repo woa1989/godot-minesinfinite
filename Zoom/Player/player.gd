@@ -50,8 +50,8 @@ func _process(_delta: float) -> void:
 
 
 func LookMounse() -> void:
-	if CanMove:
-		shape.look_at(get_global_mouse_position())
+	# 即使不能移动，也可以瞄准
+	shape.look_at(get_global_mouse_position())
 
 func UpdateUI() -> void:
 	HPBar.value = Hp
@@ -77,16 +77,22 @@ func Die() -> void:
 
 func shoot() -> void:
 	# 射击无法移动
-	GlobalVars.bullets -= 1
-	var c = CannonBall.instantiate()
-	get_tree().current_scene.add_child(c)
-	c.global_position = Muzzle.global_position
-	c.rotation = shape.rotation
-	SoundPlayer.stream = ChargeStream
-	SoundPlayer.play(0.0)
-	FreezeTimer.start(FreezeTime)
-	CanMove = false
-	velocity = Vector2.ZERO
+	if GlobalVars.use_bullet():
+		var c = CannonBall.instantiate()
+		get_tree().current_scene.add_child(c)
+		c.global_position = Muzzle.global_position
+		c.rotation = shape.rotation
+		SoundPlayer.stream = ChargeStream
+		SoundPlayer.play(0.0)
+		FreezeTimer.start(FreezeTime)
+		CanMove = false
+		velocity = Vector2.ZERO
+		
+		# 检查是否用完了所有子弹
+		if GlobalVars.bullets <= 0:
+			var game_manager = get_node("/root/GameManager")
+			if game_manager:
+				game_manager.check_game_status()
 	
 		
 func _on_FreezeTimer_timeout() -> void:
