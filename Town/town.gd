@@ -38,6 +38,7 @@ func buy_item(item: Global.ShopItem):
 	
 func to_mine():
 	Global.in_store = false
+	# 切换到矿洞场景，保持现有的loaded_chunks_cache
 	get_tree().change_scene_to_file("res://Level/level.tscn")
 
 func setup_loading_screen():

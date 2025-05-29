@@ -1,7 +1,6 @@
 extends Node2D
 
 # === 常量和预加载 ===
-const TileSetDataHelper = preload("res://Level/tileset_custom_data.gd")
 const MapData = preload("res://Level/map_data.gd")
 
 # === 地图类型枚举(从MapData同步) ===
@@ -19,13 +18,8 @@ enum {
 @export var noise: FastNoiseLite # 噪声生成器
 @export_group("洞穴生成参数")
 @export var enable_caves: bool = true # 是否启用洞穴生成
-@export_range(0, 8) var min_cave_neighbors := 4 # 最小邻居数（少于这个数的空洞会被填充）
-@export_range(0, 8) var birth_limit := 4 # 生成新洞所需邻居数
-@export_range(0, 8) var death_limit := 3 # 填充洞所需邻居数
-@export_range(1, 5) var simulation_steps := 3 # 元胞自动机迭代次数
-@export_range(0.0, 1.0) var initial_cave_chance := 0.45 # 初始洞穴概率
-@export_range(0.0, 1.0) var depth_factor_rate: float = 0.008 # 深度影响系数
-@export_range(0.0, 1.0) var horizontal_variation_rate: float = 0.3 # 水平变化系数
+@export_range(0.1, 1.0) var cave_threshold := 0.3 # 洞穴生成阈值（越小洞穴越多，参考demo默认0.25）
+@export_range(0.0, 0.1) var depth_factor_rate: float = 0.005 # 深度影响系数（每层增加洞穴概率）
 
 # === 缓存系统 ===
 var chunk_cave_cache := {} # 缓存每个区块的洞穴数据
@@ -53,7 +47,7 @@ var current_chunk = Vector2i.ZERO # 当前玩家所在区块
 # === 地图初始化 ===
 func _ready() -> void:
 	_configure_noise()
-	set_current_map(current_map_id) # 不需要await
+	set_current_map(current_map_id)
 	player.dig.connect(_on_player_dig)
 	_init_map_loading()
 
@@ -61,13 +55,23 @@ func _ready() -> void:
 func _configure_noise() -> void:
 	if not noise:
 		noise = FastNoiseLite.new()
+	
+	# 确保 noise_seed 持久化
+	if not Global.has_existing_mine:
+		# 仅在第一次生成地图时设置新的随机种子
+		Global.noise_seed = randi()
+		print("[World] 为新地图生成噪声种子:", Global.noise_seed)
+	else:
+		print("[World] 使用已存在的噪声种子:", Global.noise_seed)
+	
 	# 配置噪声参数
 	noise.noise_type = FastNoiseLite.TYPE_PERLIN
-	noise.seed = Global.noise_seed
-	noise.frequency = 0.2 # 提高频率，使空洞分布更密集
-	noise.fractal_octaves = 4 # 增加倍频，使空洞更自然
-	noise.fractal_gain = 0.6 # 提高增益，增强细节
-	noise.fractal_lacunarity = 3.0 # 增加分形间隔，增加变化
+	noise.seed = Global.noise_seed # 使用持久化的种子
+	noise.frequency = 0.1
+	noise.fractal_type = FastNoiseLite.FRACTAL_FBM
+	noise.fractal_octaves = 3
+	noise.fractal_lacunarity = 2.0
+	noise.fractal_gain = 0.5
 
 # === 地图加载 ===
 func set_current_map(map_id: String) -> void:
@@ -111,14 +115,17 @@ func _configure_tileset(map_data: Dictionary) -> void:
 		push_error("[World] 无法克隆tileset!")
 
 func _setup_tilesets(new_tileset) -> void:
+	print("[World] 开始设置tileset...")
 	map.tile_set = new_tileset
+	print("[World] tileset已设置到map")
 	
-	# 等待加载完成
-	await get_tree().process_frame
-	await get_tree().process_frame
+	# 简化初始化流程，直接初始化自定义数据层
+	_init_custom_data_layers()
 	
 	if _validate_tilesets():
-		_init_custom_data_layers()
+		print("[World] tileset初始化和验证成功")
+	else:
+		push_error("[World] TileSet验证失败，但继续运行")
 
 # === 自定义数据层管理 ===
 func get_custom_data_layers() -> Dictionary:
@@ -127,10 +134,45 @@ func get_custom_data_layers() -> Dictionary:
 		return {}
 		
 	if _layers and _layers.has("health_id") and _layers.has("value_id"):
-		return _layers
+		# 验证缓存的layer_id是否仍然有效
+		var tileset = map.tile_set
+		var health_id = _layers["health_id"]
+		var value_id = _layers["value_id"]
+		if tileset.get_custom_data_layers_count() > max(health_id, value_id):
+			print("[World] 使用缓存的数据层: ", _layers)
+			return _layers
+		else:
+			print("[World] 缓存的数据层无效，重新获取...")
+			_layers = {}
 		
-	if TileSetDataHelper.validate_custom_data(map.tile_set):
-		var layers = {}
+	print("[World] 尝试重新获取自定义数据层...")
+	
+	# 直接尝试获取数据层，不依赖验证
+	var layers = {}
+	var layer_count = map.tile_set.get_custom_data_layers_count()
+	print("[World] TileSet自定义数据层数量: ", layer_count)
+	
+	for i in range(layer_count):
+		var layer_name = map.tile_set.get_custom_data_layer_name(i)
+		print("[World] 数据层 ", i, ": ", layer_name)
+		if layer_name == "health":
+			layers["health_id"] = i
+		elif layer_name == "value":
+			layers["value_id"] = i
+	
+	if layers.has("health_id") and layers.has("value_id"):
+		_layers = layers
+		print("[World] 成功获取数据层: ", layers)
+		return layers
+	else:
+		print("[World] 数据层数量: ", map.tile_set.get_custom_data_layers_count())
+		print("[World] 数据层不完整，尝试重新初始化: ", layers)
+		
+		# 如果数据层不完整，尝试重新初始化
+		_init_custom_data_layers()
+		
+		# 重新尝试获取
+		layers = {}
 		for i in range(map.tile_set.get_custom_data_layers_count()):
 			var layer_name = map.tile_set.get_custom_data_layer_name(i)
 			if layer_name == "health":
@@ -140,10 +182,10 @@ func get_custom_data_layers() -> Dictionary:
 		
 		if layers.has("health_id") and layers.has("value_id"):
 			_layers = layers
+			print("[World] 重新初始化后成功获取数据层: ", layers)
 			return layers
-		
-		return layers
 	
+	print("[World] 最终获取数据层失败")
 	return {}
 
 # === 验证函数 ===
@@ -162,11 +204,11 @@ func _validate_tilesets() -> bool:
 
 # === 自定义数据层初始化 ===
 func _init_custom_data_layers() -> void:
-	_layers = TileSetDataHelper.init_custom_data(map.tile_set)
+	_layers = TileSetCustomData.init_custom_data(map.tile_set)
 	
 	if _layers.is_empty():
 		push_error("[World] 初始化tileset数据层失败!")
-		_layers = TileSetDataHelper.init_custom_data(map.tile_set)
+		_layers = TileSetCustomData.init_custom_data(map.tile_set)
 		if _layers.is_empty():
 			push_error("[World] 初始化tileset数据层第二次尝试也失败!")
 			return
@@ -198,8 +240,16 @@ func _load_chunk_data(_chunk_pos: Vector2i, source_id: int, chunk_data: Dictiona
 		map.set_cell(pos, source_id, tile_info.atlas_coords)
 		var tile_data = map.get_cell_tile_data(pos)
 		if tile_data and _layers:
-			tile_data.set_custom_data_by_layer_id(_layers["health_id"], tile_info.health)
-			tile_data.set_custom_data_by_layer_id(_layers["value_id"], tile_info.value)
+			# 验证自定义数据层是否存在
+			var tileset = map.tile_set
+			if tileset and tileset.get_custom_data_layers_count() > 0:
+				var health_id = _layers.get("health_id", -1)
+				var value_id = _layers.get("value_id", -1)
+				# 确保layer_id在有效范围内
+				if health_id >= 0 and health_id < tileset.get_custom_data_layers_count():
+					tile_data.set_custom_data_by_layer_id(health_id, tile_info.health)
+				if value_id >= 0 and value_id < tileset.get_custom_data_layers_count():
+					tile_data.set_custom_data_by_layer_id(value_id, tile_info.value)
 
 func _generate_new_chunk(chunk_pos: Vector2i) -> void:
 	var layers = get_custom_data_layers()
@@ -208,6 +258,8 @@ func _generate_new_chunk(chunk_pos: Vector2i) -> void:
 		return
 		
 	var chunk_data = {}
+	var cave_count = 0 # 统计洞穴数量
+	var total_positions = 0 # 统计总位置数
 	
 	# 生成区块内的每个瓦片
 	for x in range(CHUNK_SIZE):
@@ -221,12 +273,27 @@ func _generate_new_chunk(chunk_pos: Vector2i) -> void:
 				_generate_ground_tile(pos, layers)
 				_save_tile_to_cache(chunk_data, pos, GROUND, 1, 1)
 			else:
-				_generate_underground_tile(pos, world_y)
-				var tile_type = _get_tile_type_at(pos, world_y)
-				if tile_type != EMPTY:
-					var health = _get_tile_health(tile_type)
-					var value = _get_tile_value(tile_type)
-					_save_tile_to_cache(chunk_data, pos, tile_type, health, value)
+				# 统计地下部分
+				if world_y > 0:
+					total_positions += 1
+					var should_generate = _should_generate_block(world_y, pos)
+					if not should_generate:
+						cave_count += 1
+					else:
+						_generate_underground_tile(pos, world_y)
+						var tile_type = _get_tile_type_at(pos, world_y)
+						if tile_type != EMPTY:
+							var health = _get_tile_health(tile_type)
+							var value = _get_tile_value(tile_type)
+							_save_tile_to_cache(chunk_data, pos, tile_type, health, value)
+	
+	# 输出洞穴生成统计（仅对地下区块，且为调试模式时）
+	if total_positions > 0 and chunk_pos.y > 0 and OS.is_debug_build():
+		var cave_percentage = float(cave_count) / float(total_positions) * 100.0
+		print("[Cave Debug] 区块 %s: 洞穴率 %.1f%% (%d/%d), 深度范围: %d-%d" % [
+			chunk_pos, cave_percentage, cave_count, total_positions,
+			chunk_pos.y * CHUNK_SIZE, (chunk_pos.y + 1) * CHUNK_SIZE - 1
+		])
 	
 	# 缓存生成的区块数据
 	if not chunk_data.is_empty():
@@ -240,8 +307,16 @@ func _generate_ground_tile(pos: Vector2i, layers: Dictionary) -> void:
 		map.set_cell(pos, source_id, atlas_map[GROUND])
 		var tile_data = map.get_cell_tile_data(pos)
 		if tile_data and layers.has("health_id") and layers.has("value_id"):
-			tile_data.set_custom_data_by_layer_id(layers["health_id"], 1)
-			tile_data.set_custom_data_by_layer_id(layers["value_id"], 1)
+			# 验证自定义数据层是否存在
+			var tileset = map.tile_set
+			if tileset and tileset.get_custom_data_layers_count() > 0:
+				var health_id = layers["health_id"]
+				var value_id = layers["value_id"]
+				# 确保layer_id在有效范围内
+				if health_id >= 0 and health_id < tileset.get_custom_data_layers_count():
+					tile_data.set_custom_data_by_layer_id(health_id, 1)
+				if value_id >= 0 and value_id < tileset.get_custom_data_layers_count():
+					tile_data.set_custom_data_by_layer_id(value_id, 1)
 
 func _generate_underground_tile(pos: Vector2i, world_y: int) -> void:
 	var should_generate = _should_generate_block(world_y, pos)
@@ -264,28 +339,36 @@ func _create_block(pos: Vector2i, source_id: int, world_y: int) -> void:
 	map.set_cell(pos, source_id, atlas_map[block_type])
 	var tile_data = map.get_cell_tile_data(pos)
 	if tile_data and _layers:
-		tile_data.set_custom_data_by_layer_id(_layers["health_id"], health)
-		tile_data.set_custom_data_by_layer_id(_layers["value_id"], value)
+		# 验证自定义数据层是否存在
+		var tileset = map.tile_set
+		if tileset and tileset.get_custom_data_layers_count() > 0:
+			var health_id = _layers.get("health_id", -1)
+			var value_id = _layers.get("value_id", -1)
+			# 确保layer_id在有效范围内
+			if health_id >= 0 and health_id < tileset.get_custom_data_layers_count():
+				tile_data.set_custom_data_by_layer_id(health_id, health)
+			if value_id >= 0 and value_id < tileset.get_custom_data_layers_count():
+				tile_data.set_custom_data_by_layer_id(value_id, value)
 
 func _determine_block_type(world_y: int, _pos: Vector2i) -> int:
 	# 基于深度和随机性决定方块类型
 	var rand_val = randf()
 	var depth_factor = min(world_y / 50.0, 1.0)
 
-	# 特别设置：每7层必定生成炸弹
-	if world_y > 0 and world_y % 7 == 0 and rand_val < 0.9:
-		print("[World] 在深度 ", world_y, " 强制生成炸弹")
+	# 特殊深度增加炸弹几率
+	if world_y > 0 and world_y % 8 == 0 and rand_val < 0.4:
+		print("[World] 在特殊深度 ", world_y, " 生成炸弹")
 		return BOOM
 
-	# 炸弹概率翻倍，宝箱概率减半
-	if rand_val < 0.64 + depth_factor * 0.24: # 炸药 - 概率翻倍
-		print("[World] 正常概率生成炸弹在深度 ", world_y)
+	# 较高炸弹生成概率，较低宝箱概率
+	if rand_val < 0.20 + depth_factor * 0.15: # 炸弹 - 较高概率20%~35%
+		print("[World] 生成炸弹在深度 ", world_y)
 		return BOOM
-	elif rand_val < 0.34 + depth_factor * 0.005: # 高级宝箱（极低，减半）
+	elif rand_val < 0.22 + depth_factor * 0.03: # 高级宝箱（稀有）2%~5%
 		return CHEST3
-	elif rand_val < 0.36 + depth_factor * 0.005: # 中级宝箱（极低，减半）
+	elif rand_val < 0.26 + depth_factor * 0.03: # 中级宝箱（较少）4%~7%
 		return CHEST2
-	elif rand_val < 0.38 + depth_factor * 0.005: # 低级宝箱（低，减半）
+	elif rand_val < 0.32 + depth_factor * 0.04: # 低级宝箱（更少）6%~10%
 		return CHEST1
 	else:
 		return DIRT
@@ -315,7 +398,6 @@ func _get_tile_type_at(pos: Vector2i, world_y: int) -> int:
 		return EMPTY
 	return _determine_block_type(world_y, pos)
 
-# === 方块生成逻辑 ===
 func _should_generate_block(world_y: int, pos: Vector2i = Vector2i.ZERO) -> bool:
 	# 地表以上不生成方块
 	if world_y < 0:
@@ -325,95 +407,20 @@ func _should_generate_block(world_y: int, pos: Vector2i = Vector2i.ZERO) -> bool
 	if world_y == 0:
 		return true
 		
-	# 使用改进的洞穴生成系统
+	# 使用demo风格的洞穴生成系统
 	if enable_caves:
-		var chunk_pos = Vector2i(floor(pos.x / float(CHUNK_SIZE)),
-							   floor(pos.y / float(CHUNK_SIZE)))
+		# 计算深度影响（越深洞穴越多，但有上限）
+		var depth_factor = min(world_y * depth_factor_rate, 0.2)
+		var final_threshold = cave_threshold + depth_factor # 深度越深，阈值越高，洞穴越多
 		
-		# 检查区块缓存
-		if not chunk_cave_cache.has(chunk_pos):
-			_generate_cave_for_chunk(chunk_pos)
+		# 使用与demo相同的逻辑：noise值小于阈值时生成洞穴
+		var noise_value = noise.get_noise_2d(pos.x, pos.y) + 1.0 # 范围 [0, 2]
 		
-		# 获取区块内的相对位置
-		var local_x = posmod(pos.x, CHUNK_SIZE)
-		var local_y = posmod(pos.y, CHUNK_SIZE)
-		var cave_data = chunk_cave_cache[chunk_pos]
-		
-		# 深度影响（越深洞穴越多）
-		var depth_factor = min(world_y * depth_factor_rate, 0.3)
-		var should_be_cave = cave_data[local_x][local_y]
-		
-		# 深度越深，越容易出现洞
-		if depth_factor > 0 and randf() < depth_factor and not should_be_cave:
-			should_be_cave = true
-		
-		return not should_be_cave
+		# 如果噪声值小于阈值，生成洞穴（不生成方块）
+		# 这与demo的逻辑完全一致：(noise.get_noise_2d(x, y) + 1) < cave_threshold
+		return noise_value >= final_threshold
 	
 	return true
-
-# 为指定区块生成洞穴数据（使用元胞自动机）
-func _generate_cave_for_chunk(chunk_pos: Vector2i) -> void:
-	# 初始化区块大小的二维数组
-	var cave_data: Array = []
-	for x in range(CHUNK_SIZE):
-		cave_data.append([])
-		for y in range(CHUNK_SIZE):
-			# 使用噪声和随机值结合确定初始洞穴
-			var world_x = chunk_pos.x * CHUNK_SIZE + x
-			var world_y = chunk_pos.y * CHUNK_SIZE + y
-			
-			# 使用噪声生成基础洞穴概率
-			var noise_val = (noise.get_noise_2d(world_x, world_y) + 1) * 0.5
-			
-			# 加入水平变化因子
-			var horizontal_noise = (noise.get_noise_2d(world_x * horizontal_variation_rate, 0) + 1) * 0.5
-			
-			# 结合垂直和水平变化
-			var cave_chance = initial_cave_chance + (horizontal_noise - 0.5) * 0.3
-			
-			# 确保概率在合理范围内
-			cave_chance = clamp(cave_chance, 0.2, 0.7)
-			
-			cave_data[x].append(noise_val < cave_chance or randf() < cave_chance)
-	
-	# 应用元胞自动机规则多次迭代
-	for _step in range(simulation_steps):
-		var new_data := []
-		for x in range(CHUNK_SIZE):
-			new_data.append([])
-			for y in range(CHUNK_SIZE):
-				var caves = _count_cave_neighbors(cave_data, x, y)
-				if cave_data[x][y]:
-					# 已是洞的情况
-					new_data[x].append(caves >= death_limit)
-				else:
-					# 不是洞的情况
-					new_data[x].append(caves > birth_limit)
-		cave_data = new_data
-	
-	# 优化：移除孤立的小洞
-	for x in range(CHUNK_SIZE):
-		for y in range(CHUNK_SIZE):
-			if cave_data[x][y]:
-				var caves = _count_cave_neighbors(cave_data, x, y)
-				if caves < min_cave_neighbors:
-					cave_data[x][y] = false
-	
-	# 缓存结果
-	chunk_cave_cache[chunk_pos] = cave_data
-
-# 计算周围8个格子中的洞的数量
-func _count_cave_neighbors(cave_data: Array, x: int, y: int) -> int:
-	var count := 0
-	for dx in range(-1, 2):
-		for dy in range(-1, 2):
-			if dx == 0 and dy == 0:
-				continue
-			var nx := posmod(x + dx, CHUNK_SIZE)
-			var ny := posmod(y + dy, CHUNK_SIZE)
-			if cave_data[nx][ny]:
-				count += 1
-	return count
 
 # 保存瓦片到缓存
 func _save_tile_to_cache(chunk_data: Dictionary, pos: Vector2i, tile_type: int, health: int, value: int) -> void:

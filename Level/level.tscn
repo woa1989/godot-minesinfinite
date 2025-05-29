@@ -1,6 +1,6 @@
 [gd_scene load_steps=7 format=3 uid="uid://ty4ric6yq3uf"]
 
-[ext_resource type="Script" uid="uid://bagrurhhi5clq" path="res://Level/world.gd" id="1_qmtf6"]
+[ext_resource type="Script" uid="uid://txaxme3t6e2u" path="res://Level/world_single_layer.gd" id="1_qmtf6"]
 [ext_resource type="TileSet" uid="uid://68n5bu7w3mvq" path="res://Level/level.tres" id="3_iincs"]
 [ext_resource type="Script" uid="uid://dbiu48lq8il7q" path="res://Level/map.gd" id="4_iincs"]
 [ext_resource type="Script" uid="uid://f2ww6w12w4gp" path="res://Level/level.gd" id="5_level"]
@@ -8,7 +8,7 @@
 
 [sub_resource type="FastNoiseLite" id="FastNoiseLite_iincs"]
 seed = 123456
-frequency = 0.03
+frequency = 0.4
 fractal_octaves = 2
 fractal_gain = 0.4
 

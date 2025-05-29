@@ -218,8 +218,16 @@ func _load_chunk_data(_chunk_pos: Vector2i, source_id: int, chunk_data: Dictiona
 		map.set_cell(pos, source_id, tile_info.atlas_coords)
 		var tile_data = map.get_cell_tile_data(pos)
 		if tile_data and _layers:
-			tile_data.set_custom_data_by_layer_id(_layers["health_id"], tile_info.health)
-			tile_data.set_custom_data_by_layer_id(_layers["value_id"], tile_info.value)
+			# 验证自定义数据层是否存在
+			var tileset = map.tile_set
+			if tileset and tileset.get_custom_data_layers_count() > 0:
+				var health_id = _layers.get("health_id", -1)
+				var value_id = _layers.get("value_id", -1)
+				# 确保layer_id在有效范围内
+				if health_id >= 0 and health_id < tileset.get_custom_data_layers_count():
+					tile_data.set_custom_data_by_layer_id(health_id, tile_info.health)
+				if value_id >= 0 and value_id < tileset.get_custom_data_layers_count():
+					tile_data.set_custom_data_by_layer_id(value_id, tile_info.value)
 
 func _generate_new_chunk(chunk_pos: Vector2i) -> void:
 	var layers = get_custom_data_layers()
@@ -260,7 +268,16 @@ func _generate_ground_tile(pos: Vector2i, layers: Dictionary) -> void:
 		map.set_cell(pos, source_id, atlas_map[GROUND])
 		var tile_data = map.get_cell_tile_data(pos)
 		if tile_data and layers.has("health_id") and layers.has("value_id"):
-			tile_data.set_custom_data_by_layer_id(layers["health_id"], 1)
+			# 验证自定义数据层是否存在
+			var tileset = map.tile_set
+			if tileset and tileset.get_custom_data_layers_count() > 0:
+				var health_id = layers["health_id"]
+				var value_id = layers["value_id"]
+				# 确保layer_id在有效范围内
+				if health_id >= 0 and health_id < tileset.get_custom_data_layers_count():
+					tile_data.set_custom_data_by_layer_id(health_id, 1)
+				if value_id >= 0 and value_id < tileset.get_custom_data_layers_count():
+					tile_data.set_custom_data_by_layer_id(value_id, 1)
 			tile_data.set_custom_data_by_layer_id(layers["value_id"], 1)
 
 func _generate_underground_tile(pos: Vector2i, world_y: int) -> void:
@@ -280,8 +297,16 @@ func _create_block(pos: Vector2i, source_id: int, world_y: int) -> void:
 	map.set_cell(pos, source_id, atlas_map[block_type])
 	var tile_data = map.get_cell_tile_data(pos)
 	if tile_data and _layers:
-		tile_data.set_custom_data_by_layer_id(_layers["health_id"], health)
-		tile_data.set_custom_data_by_layer_id(_layers["value_id"], value)
+		# 验证自定义数据层是否存在
+		var tileset = map.tile_set
+		if tileset and tileset.get_custom_data_layers_count() > 0:
+			var health_id = _layers.get("health_id", -1)
+			var value_id = _layers.get("value_id", -1)
+			# 确保layer_id在有效范围内
+			if health_id >= 0 and health_id < tileset.get_custom_data_layers_count():
+				tile_data.set_custom_data_by_layer_id(health_id, health)
+			if value_id >= 0 and value_id < tileset.get_custom_data_layers_count():
+				tile_data.set_custom_data_by_layer_id(value_id, value)
 
 func _determine_block_type(world_y: int, _pos: Vector2i) -> int:
 	# 基于深度和随机性决定方块类型

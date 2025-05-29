@@ -1,191 +1,196 @@
 extends RigidBody2D
 
-# === 配置资源 ===
-@export var config: Resource # 炸弹配置资源
-
 # === 基础属性 ===
-var time_left: float # 剩余时间
-var explosion_radius: float # 爆炸范围
-var damage: int # 爆炸伤害
+var time_left: float = 3.0 # 剩余时间（与场景中Timer的配置保持一致）
+var damage: int = 2 # 爆炸伤害
+var is_thrown: bool = false # 标记是否为投掷的炸弹
 
 # === 引用节点 ===
 var map: TileMapLayer # 地图层
 var world: Node2D # 世界节点
 
+# === 物理常量 ===
+const FRICTION: float = 5.0 # 摩擦系数
+const LINEAR_DAMP: float = 2.0 # 线性阻尼
+const MASS: float = 2.0 # 质量
+
 # === 状态标志 ===
 var is_exploding := false # 防止重复爆炸
-var show_debug := false # 调试模式
-
-# === 全局防重复爆炸 ===
-static var exploding_tiles: Dictionary = {} # 正在爆炸的瓦片位置 {Vector2i: float(time)}
-static var explosion_cleanup_timer: float = 0.0 # 清理计时器
 
 # === 初始化 ===
 func _ready() -> void:
-	_load_config() # 加载配置
+	print("[Bomb] _ready() - 初始化开始")
+	# 设置物理属性
+	mass = MASS
+	linear_damp = LINEAR_DAMP
+	var physics_material = PhysicsMaterial.new()
+	physics_material.friction = FRICTION
+	physics_material_override = physics_material
+	
 	add_to_group("bombs") # 添加到炸弹组
 	_init_nodes() # 初始化节点引用
-	_setup_physics() # 设置物理属性
 	_init_ui() # 初始化界面
-
-# === 配置加载 ===
-func _load_config() -> void:
-	if not config:
-		push_error("未设置炸弹配置！使用默认值")
-		config = preload("res://Items/default_bomb_config.tres")
 	
-	# 从配置加载属性
-	time_left = config.time_left
-	explosion_radius = config.explosion_radius
-	damage = config.damage
+	# 使用信号连接语法确保Timer信号一定会连接
+	if not $Timer.timeout.is_connected(_on_timer_timeout):
+		$Timer.timeout.connect(_on_timer_timeout)
+		print("[Bomb] Timer信号连接成功")
+	
+	print("[Bomb] _ready() - 初始化完成")
 
 # === 节点初始化 ===
 func _init_nodes() -> void:
-	world = get_parent()
-	map = get_node_or_null("/root/Level/World/Map")
+	# 优先查找父节点，确保是 Node2D 类型
+	var parent = get_parent()
+	world = parent if parent is Node2D else null
 	
+	# 从父节点开始向上查找 TileMapLayer
+	var node = get_parent()
+	while node:
+		# 优先在子节点中查找 Map
+		var map_node = node.get_node_or_null("Map")
+		if map_node and map_node is TileMapLayer:
+			map = map_node
+			print("[Bomb] 找到Map节点: ", map)
+			break
+			
+		# 向上递归查找
+		node = node.get_parent()
+		if node is Window: # 如果到达了Window节点，停止搜索
+			break
+	
+	# 如果还找不到，尝试全局路径
 	if not map:
-		push_error("无法找到Map节点，请确认节点路径是否正确")
-		push_error("无法找到Props节点，请确认节点路径是否正确")
-
-# === 物理属性设置 ===
-func _setup_physics() -> void:
-	mass = config.mass
-	linear_damp = config.linear_damp
-	
-	var physics_material = PhysicsMaterial.new()
-	physics_material.friction = config.friction
-	physics_material_override = physics_material
+		var global_map = get_node_or_null("/root/Level/World/Map")
+		if global_map:
+			map = global_map
+			print("[Bomb] 使用全局路径找到Map节点")
+		else:
+			push_error("[Bomb] 无法找到Map节点，炸弹将不能破坏地形!")
+			
+	# 确保world节点设置正确
+	if not world:
+		node = self
+		while node:
+			node = node.get_parent()
+			if node is Node2D and not node is TileMapLayer:
+				world = node
+				print("[Bomb] 找到World节点: ", world)
+				break
+			if node is Window:
+				break
 
 # === UI初始化 ===
 func _init_ui() -> void:
-	if not $Timer.timeout.is_connected(_on_timer_timeout):
-		$Timer.timeout.connect(_on_timer_timeout)
 	$CountdownLabel.text = str(ceil(time_left))
-	
-	$Timer.wait_time = time_left
-	$Timer.start()
-	set_process(true)
+	set_process(true) # 设置为true以启用_process
+
+# === 信号回调 ===
+func _on_timer_timeout() -> void:
+	print("[Bomb] Timer超时 - 立即触发爆炸")
+	if not is_exploding: # 加一个安全检查
+		$ExplosionArea/CollisionShape2D.disabled = false
+		call_deferred("explode") # 使用 call_deferred 确保安全调用
 
 # === 主要功能函数 ===
 ## 爆炸主函数
 func explode() -> void:
+	print("[Bomb] explode() 开始执行")
 	if is_exploding:
+		print("[Bomb] 已经在爆炸中，跳过")
 		return
-	
 	is_exploding = true
+	
+	# 停止计时器和进程
+	$Timer.stop()
+	set_process(false)
+	print("[Bomb] Timer已停止，process已禁用")
+	
 	if map and world:
+		print("[Bomb] 开始处理爆炸 - Map和World节点都有效")
 		_handle_explosion()
+		
+	else:
+		print("[Bomb] 爆炸处理失败 - Map:", map != null, " World:", world != null)
 	_play_explosion_effects()
 
-## 处理爆炸逻辑
+
+## 原始的地图炸弹爆炸处理(保持不变)
 func _handle_explosion() -> void:
-	print("[Bomb] 开始爆炸处理...")
 	var center_tile = map.local_to_map(map.to_local(global_position))
-	print("[Bomb] 爆炸中心瓦片坐标: ", center_tile)
-	
-	# 定义爆炸范围（转换为瓦片单位）
-	var tile_radius = ceil(explosion_radius / 64.0) # 假设瓦片大小为64
+	print("[Bomb] 爆炸中心点: ", center_tile)
+	var explosion_radius = 1 # 爆炸半径（九宫格）
 	
 	# 遍历爆炸范围内的所有瓦片
-	for y in range(-tile_radius, tile_radius + 1):
-		for x in range(-tile_radius, tile_radius + 1):
+	for y in range(-explosion_radius, explosion_radius + 1):
+		for x in range(-explosion_radius, explosion_radius + 1):
 			var tile_pos = center_tile + Vector2i(x, y)
-			var distance = Vector2(x, y).length() * 64.0
+			var damage_dealt = damage # 所有位置造成相同的伤害
 			
-			# 如果在爆炸半径内
-			if distance <= explosion_radius:
-				_process_explosion_tile(tile_pos)
+			print("[Bomb] 检查位置: ", tile_pos)
+			
+			# 1. 检查该瓦片上是否有其他炸弹
+			var bombs = get_tree().get_nodes_in_group("bombs")
+			for bomb in bombs:
+				if bomb == self or bomb.is_queued_for_deletion():
+					continue
+				# 判断炸弹是否在该瓦片上
+				var bomb_tile = map.local_to_map(map.to_local(bomb.global_position))
+				if bomb_tile == tile_pos:
+					print("[Bomb] 发现其他炸弹，触发连锁爆炸")
+					bomb.take_damage(damage_dealt)
+					continue
+			
+			# 2. 检查并伤害瓦片
+			print("[Bomb] 尝试对瓦片造成伤害: ", tile_pos)
+			_damage_tile(tile_pos, damage_dealt)
 
-## 处理爆炸范围内的单个瓦片
-func _process_explosion_tile(tile_pos: Vector2i) -> void:
-	print("[Bomb] 检查坐标: ", tile_pos)
-	
-	# 获取单层地图的瓦片数据
-	var tile_data = _get_tile_data(map, tile_pos)
-	
-	# 如果没有方块，则返回
+## 对瓦片造成伤害
+func _damage_tile(tile_pos: Vector2i, damage_amount: int) -> void:
+	var tile_data = map.get_cell_tile_data(tile_pos)
 	if not tile_data:
+		print("[Bomb] 位置 ", tile_pos, " 没有瓦片数据")
 		return
-	
-	# 优先处理炸药块（可能触发连锁反应）
-	if _handle_explosives(tile_pos):
-		return
-	
-	# 处理普通方块
-	_handle_regular_block(tile_pos, tile_data, map)
-
-## 处理爆炸物（炸弹和炸药块）
-func _handle_explosives(tile_pos: Vector2i) -> bool:
-	# 检查这个位置是否已经在爆炸中
-	if exploding_tiles.has(tile_pos):
-		print("[Bomb] 跳过重复爆炸: ", tile_pos)
-		return true
-	
-	var boom_coords = _get_boom_coords()
-	var boom_info = _check_boom_in_layers(tile_pos, boom_coords)
-	
-	if boom_info.found:
-		# 标记这个位置正在爆炸
-		exploding_tiles[tile_pos] = Time.get_unix_time_from_system() + 1.0
-		_trigger_chain_explosion(tile_pos, boom_info.layer)
-		return true
-	return false
-
-## 处理普通方块
-func _handle_regular_block(tile_pos: Vector2i, tile_data: TileData, layer: TileMapLayer) -> void:
-	var current_health = tile_data.get_custom_data("health") if tile_data else 1
-	var health = current_health - damage
-	print("[Bomb] 方块血量变化: ", tile_pos, " ", health + damage, " -> ", health)
-	
-	if health <= 0:
-		_destroy_block(tile_pos, layer)
-	else:
-		_update_block_health(tile_pos, tile_data, health, layer)
-
-# === 辅助函数 ===
-## 获取瓦片数据
-func _get_tile_data(layer: TileMapLayer, pos: Vector2i) -> TileData:
-	var source_id = layer.get_cell_source_id(pos)
-	return layer.get_cell_tile_data(pos) if source_id != -1 else null
-
-## 获取炸药块坐标
-func _get_boom_coords() -> Vector2i:
-	return world.atlas_map[world.BOOM] if "atlas_map" in world and "BOOM" in world else Vector2i(7, 5)
-
-## 检查是否是炸药块
-func _check_boom_in_layers(tile_pos: Vector2i, boom_coords: Vector2i) -> Dictionary:
-	var result = {"found": false, "layer": null}
-	
-	# 检查单层地图
-	if _is_boom_in_layer(map, tile_pos, boom_coords):
-		result.found = true
-		result.layer = map
-		return result
-	
-	return result
-
-func _is_boom_in_layer(layer: TileMapLayer, tile_pos: Vector2i, boom_coords: Vector2i) -> bool:
-	var atlas_coords = layer.get_cell_atlas_coords(tile_pos)
-	return layer.get_cell_source_id(tile_pos) != -1 and atlas_coords == boom_coords
-
-## 触发连锁爆炸
-func _trigger_chain_explosion(tile_pos: Vector2i, layer: TileMapLayer) -> void:
-	var tile_data = _get_tile_data(layer, tile_pos)
-	if tile_data:
-		var chain_radius = tile_data.get_custom_data("value") * config.chain_explosion_multiplier
-		_destroy_block(tile_pos, layer)
 		
-		# 使用延时触发连锁爆炸，避免同时爆炸导致的重复处理
-		await get_tree().create_timer(0.1).timeout
+	# 检查是否是宝箱或其他可破坏物
+	var world_node = map.get_parent()
+	var atlas_coords = map.get_cell_atlas_coords(tile_pos)
+	print("[Bomb] 瓦片坐标: ", atlas_coords)
+
+	# 获取瓦片类型
+	if "atlas_map" in world_node:
+		var DIRT = 1
+		var CHEST1 = 2
+		var CHEST2 = 3
+		var CHEST3 = 4
+		var GROUND = 5
+		var BOOM = 6
 		
-		# 创建新的爆炸
-		var new_bomb = load("res://Items/Bomb.tscn").instantiate()
-		world.add_child(new_bomb)
-		new_bomb.global_position = layer.map_to_local(tile_pos)
-		new_bomb.explosion_radius = chain_radius
-		new_bomb.damage = damage
-		new_bomb.explode()
+		var chest_coords = [
+			world_node.atlas_map[CHEST1],
+			world_node.atlas_map[CHEST2],
+			world_node.atlas_map[CHEST3]
+		]
+		
+		var is_dirt = (atlas_coords == world_node.atlas_map[DIRT])
+		var is_chest = chest_coords.has(atlas_coords)
+		var is_boom = (atlas_coords == world_node.atlas_map[BOOM])
+		var is_ground = (atlas_coords == world_node.atlas_map[GROUND])
+		
+		# 对土块、宝箱、炸药或地面造成伤害
+		if is_dirt or is_chest or is_boom or is_ground:
+			for _i in range(damage_amount):
+				map.process_tile_damage(tile_pos, map, tile_data)
+				# 如果瓦片被摧毁，停止伤害
+				if map.get_cell_tile_data(tile_pos) == null:
+					break
+
+## 受到伤害
+## 参数：
+##   _amount - 伤害值（未使用，但保留参数以保持接口一致）
+func take_damage(_amount: int) -> void:
+	# 立即触发爆炸
+	explode()
 
 ## 销毁方块
 func _destroy_block(tile_pos: Vector2i, layer: TileMapLayer) -> void:
@@ -194,65 +199,29 @@ func _destroy_block(tile_pos: Vector2i, layer: TileMapLayer) -> void:
 		layer.health_manager.remove_health_bar(tile_pos)
 	print("[Bomb] 销毁方块: ", tile_pos)
 
-## 更新方块血量
-func _update_block_health(tile_pos: Vector2i, tile_data: TileData, health: int, layer: TileMapLayer = null) -> void:
-	if layer == null:
-		layer = map
-		
-	tile_data.set_custom_data("health", health)
-	
-	if "health_manager" in layer:
-		if not layer.tile_max_health.has(tile_pos):
-			layer.tile_max_health[tile_pos] = tile_data.get_custom_data("health") + damage
-		var total = layer.tile_max_health[tile_pos]
-		layer.health_manager.update_tile_health(tile_pos, health, total)
-
 ## 播放爆炸效果
 func _play_explosion_effects() -> void:
 	$ColorRect.hide()
 	$CountdownLabel.text = "BOOM!"
 	$Boom.emitting = true
-	
-	# 清理节点
 	await get_tree().create_timer(1.0).timeout
 	queue_free()
 
-# === 处理函数 ===
 func _process(delta: float) -> void:
-	# 清理过期的爆炸标记
-	_cleanup_explosion_markers()
-	
 	if is_exploding:
 		return
 		
-	time_left -= delta
+	time_left = max(0, time_left - delta)
 	$CountdownLabel.text = str(ceil(time_left))
 	
-	# 更新闪烁效果
+	# 闪烁效果增加警示性
 	if time_left <= 1.0:
 		$ColorRect.color.a = 0.5 + sin(time_left * 10) * 0.5
-
-## 清理过期的爆炸标记
-func _cleanup_explosion_markers() -> void:
-	var current_time = Time.get_unix_time_from_system()
-	var to_remove = []
 	
-	for tile_pos in exploding_tiles:
-		if current_time > exploding_tiles[tile_pos]:
-			to_remove.append(tile_pos)
-	
-	for tile_pos in to_remove:
-		exploding_tiles.erase(tile_pos)
-
-func _exit_tree() -> void:
-	if show_debug:
-		queue_redraw()
+	# 如果时间到了但Timer还没触发，手动调用爆炸
+	if time_left <= 0 and not is_exploding:
+		explode()
 
 # === 伤害计算 ===
 func calculate_tile_damage(_distance: float, _radius: float) -> int:
 	return damage
-
-# === 信号回调 ===
-func _on_timer_timeout() -> void:
-	$ExplosionArea/CollisionShape2D.disabled = false
-	explode()

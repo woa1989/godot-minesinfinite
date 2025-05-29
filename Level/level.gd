@@ -9,6 +9,9 @@ func _ready():
 	init_map()
 	
 func to_town():
+	# 保存玩家在矿洞中的最后位置
+	Global.player_last_mine_position = %Player.global_position
+	print("[Level] 保存玩家位置:", Global.player_last_mine_position)
 	get_tree().change_scene_to_file("res://Town/Town.tscn")
 
 func init_map():
@@ -25,6 +28,7 @@ func init_map():
 	if map_data:
 		# 先设置基本的tileset
 		$World/Map.tile_set = map_data.tilemap
+		
 		# 等待两帧确保tileset完全加载
 		await get_tree().process_frame
 		await get_tree().process_frame
@@ -32,31 +36,33 @@ func init_map():
 		# 初始化自定义数据层
 		var result = TileSetDataHelper.init_custom_data($World/Map.tile_set)
 		if not result:
-			push_error("初始化tileset数据层失败!")
+			push_error("[Level] 初始化tileset数据层失败!")
 			return
 			
-		# 设置当前地图,这个函数是异步的
+		# 设置当前地图
 		await $World.set_current_map(map_id)
 		
 		# 再次检查tileset是否有效
 		if not $World.is_valid_tileset():
-			push_error("Tileset初始化失败,重试...")
+			push_error("[Level] Tileset初始化失败,重试...")
 			# 重新尝试设置tileset
 			$World/Map.tile_set = map_data.tilemap.duplicate()
 			await get_tree().process_frame
 			if not $World.is_valid_tileset():
-				push_error("Tileset重试失败!")
+				push_error("[Level] Tileset重试失败!")
 				return
 		
 		print("[Level] Tileset初始化成功")
 		
 		# 如果已有缓存的地图,则加载它
 		if Global.has_existing_mine:
-			$World._load_cached_chunks() # 修正：使用正确的函数名
+			$World._load_cached_chunks() # 加载之前的地图状态
 			%Player.global_position = Global.player_last_mine_position
+			print("[Level] 从缓存加载地图 - 玩家位置:", Global.player_last_mine_position, " 噪声种子:", Global.noise_seed)
 		else:
 			# 重置玩家位置
 			%Player.position = Vector2.ZERO
 			# 初始加载区块
 			$World.update_chunks()
 			Global.has_existing_mine = true
+			print("[Level] 初始化新地图 - 使用噪声种子:", Global.noise_seed)

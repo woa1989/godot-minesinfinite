@@ -43,6 +43,13 @@ var chests_collected = [0, 0, 0] # 对应三种宝箱的收集数量
 
 var current_map_id = "mine" # 当前地图ID
 
+# 清理矿洞缓存，强制重新生成
+func clear_mine_cache():
+	loaded_chunks_cache.clear()
+	has_existing_mine = false
+	noise_seed = randi()
+	print("[Global] 已清理矿洞缓存，将重新生成地形")
+
 func buy_item(item: ShopItem) -> bool:
 	if currency >= shop_prices[item]:
 		currency -= shop_prices[item]

@@ -25,6 +25,7 @@ var mining_dir: String = "" # 挖掘方向
 var mining_pos: Vector2i = Vector2i.ZERO # 挖掘目标格子
 
 func _ready():
+	print("[Player] 初始化 - 位置:", position, " 碰撞层:", collision_layer)
 	GRAVITY = ProjectSettings.get_setting("physics/2d/default_gravity")
 
 	# 挖掘动画设为非循环
@@ -202,9 +203,14 @@ func throw_bomb():
 		
 	# 创建炸弹实例
 	var bomb = Bomb.instantiate()
-	get_parent().add_child(bomb)
-	bomb.position = position
 	
+	# 将炸弹添加到世界节点下，而不是直接添加到玩家的父节点
+	var world = get_node_or_null("/root/Level/World")
+	if not world:
+		world = get_parent()
+	world.add_child(bomb)
+	
+	bomb.global_position = global_position # 使用全局坐标
 	# 根据玩家朝向设置投掷方向
 	var direction = sign($AnimatedSprite2D.scale.x) # 使用sign函数获取方向，1表示右，-1表示左
 	var impulse = Vector2(BOMB_THROW_FORCE.x * direction, BOMB_THROW_FORCE.y)
@@ -213,7 +219,7 @@ func throw_bomb():
 	# 减少炸弹数量
 	Global.dynamite_remaining -= 1
 	
-	# TODO: 播放投掷动画和音效
+	print("[Player] 投掷炸弹 - 方向:", direction, " 位置:", bomb.global_position) # 添加调试信息
 
 # 收集金币
 func collect_gold(value: int):
