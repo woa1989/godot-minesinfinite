@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="minesInfinite"
-run/main_scene="uid://omnxpq6vdhxp"
+run/main_scene="uid://ty4ric6yq3uf"
 config/features=PackedStringArray("4.4", "Forward Plus")
 config/icon="res://icon.svg"
 

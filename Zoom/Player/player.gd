@@ -72,6 +72,8 @@ func Die() -> void:
 	SoundPlayer.stream = DieSoundStream
 	SoundPlayer.play(0.0)
 	await SoundPlayer.finished
+	# 重置游戏状态，包括子弹数
+	GlobalVars.reset_game()
 	get_tree().change_scene_to_packed(load("res://Zoom/MainScene/MainScene.tscn"))
 
 
